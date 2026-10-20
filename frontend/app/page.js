@@ -1,60 +1,98 @@
 'use client';
 
 import React from 'react';
-import Link from 'next/link';
 import { Navbar } from '@/components/navbar';
-import { Button } from '@/components/ui/button';
-import { useAuth } from '@/hooks/use-auth';
+import { AuthCard } from '@/components/auth-card';
 
 export default function Home() {
-  const { isAuthenticated, user } = useAuth();
-
   return (
     <div className="min-h-screen flex flex-col bg-stormy-canvas text-stormy-main">
       <Navbar />
 
-      <main className="flex-1">
-        {/* Hero Section */}
-        <section className="py-16 sm:py-24 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto text-center">
-          <div className="inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold bg-stormy-mist/50 text-stormy-dark border border-stormy-mist mb-6">
-            Intelligent Multi-Source Job Aggregator
-          </div>
+      <main className="flex-1 flex flex-col justify-center">
+        {/* Split Hero Section */}
+        <section className="py-12 sm:py-16 lg:py-20 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto w-full">
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-12 lg:gap-8 items-center">
+            {/* Left Column: Platform Value & Messaging */}
+            <div className="lg:col-span-7 space-y-6 text-center lg:text-left">
+              <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-semibold bg-stormy-mist/50 text-stormy-dark border border-stormy-mist">
+                <span className="w-2 h-2 rounded-full bg-stormy-sky animate-pulse" />
+                Intelligent Multi-Source Job Aggregator
+              </div>
 
-          <h1 className="text-3xl sm:text-5xl lg:text-6xl font-extrabold text-stormy-main tracking-tight max-w-4xl mx-auto leading-tight sm:leading-none">
-            Find and track every opportunity in{' '}
-            <span className="text-stormy-slate">one focused workspace</span>.
-          </h1>
+              <h1 className="text-3xl sm:text-5xl lg:text-5xl xl:text-6xl font-extrabold text-stormy-main tracking-tight leading-tight sm:leading-tight">
+                Find and track every opportunity in{' '}
+                <span className="text-stormy-slate">one focused workspace</span>.
+              </h1>
 
-          <p className="mt-6 text-base sm:text-lg text-stormy-muted max-w-2xl mx-auto">
-            Stop searching across dozens of job boards. Discover aggregated listings, personalized recommendations, and manage your applications seamlessly.
-          </p>
+              <p className="text-base sm:text-lg text-stormy-muted max-w-2xl mx-auto lg:mx-0">
+                Stop checking dozens of separate job sites every morning. Discover aggregated listings, personalized matches, and manage your pipeline in one clean interface.
+              </p>
 
-          <div className="mt-8 flex flex-col sm:flex-row items-center justify-center gap-4">
-            {isAuthenticated ? (
-              <Link href="/profile">
-                <Button variant="cta" size="lg" className="w-full sm:w-auto">
-                  Go to Profile ({user?.firstName || user?.email})
-                </Button>
-              </Link>
-            ) : (
-              <>
-                <Link href="/register">
-                  <Button variant="cta" size="lg" className="w-full sm:w-auto">
-                    Create Free Account
-                  </Button>
-                </Link>
-                <Link href="/login">
-                  <Button variant="outline" size="lg" className="w-full sm:w-auto">
-                    Sign In
-                  </Button>
-                </Link>
-              </>
-            )}
+              {/* Value Highlights */}
+              <div className="pt-2 space-y-3 max-w-lg mx-auto lg:mx-0 text-left">
+                <div className="flex items-start gap-3">
+                  <div className="w-5 h-5 rounded-full bg-feedback-success-bg border border-feedback-success-border flex items-center justify-center text-feedback-success flex-shrink-0 mt-0.5">
+                    <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 13l4 4L19 7" />
+                    </svg>
+                  </div>
+                  <span className="text-sm text-stormy-main font-medium">
+                    Unified search across 50+ global boards with live deduping
+                  </span>
+                </div>
+
+                <div className="flex items-start gap-3">
+                  <div className="w-5 h-5 rounded-full bg-feedback-success-bg border border-feedback-success-border flex items-center justify-center text-feedback-success flex-shrink-0 mt-0.5">
+                    <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 13l4 4L19 7" />
+                    </svg>
+                  </div>
+                  <span className="text-sm text-stormy-main font-medium">
+                    Secure in-memory session protection with Argon2id password hashing
+                  </span>
+                </div>
+
+                <div className="flex items-start gap-3">
+                  <div className="w-5 h-5 rounded-full bg-feedback-success-bg border border-feedback-success-border flex items-center justify-center text-feedback-success flex-shrink-0 mt-0.5">
+                    <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 13l4 4L19 7" />
+                    </svg>
+                  </div>
+                  <span className="text-sm text-stormy-main font-medium">
+                    Role-tailored dashboards for Candidates and Employers
+                  </span>
+                </div>
+              </div>
+
+              {/* Stats Strip */}
+              <div className="pt-4 grid grid-cols-3 gap-4 border-t border-stormy-border/80 max-w-md mx-auto lg:mx-0">
+                <div>
+                  <div className="text-xl sm:text-2xl font-bold text-stormy-dark">10k+</div>
+                  <div className="text-xs text-stormy-muted font-medium">Active Listings</div>
+                </div>
+                <div>
+                  <div className="text-xl sm:text-2xl font-bold text-stormy-dark">50+</div>
+                  <div className="text-xs text-stormy-muted font-medium">Partner Boards</div>
+                </div>
+                <div>
+                  <div className="text-xl sm:text-2xl font-bold text-stormy-dark">100%</div>
+                  <div className="text-xs text-stormy-muted font-medium">Verified Accounts</div>
+                </div>
+              </div>
+            </div>
+
+            {/* Right Column: Embedded Sliding Auth Card */}
+            <div className="lg:col-span-5 w-full flex justify-center lg:justify-end">
+              <div id="auth-card" className="w-full max-w-md">
+                <AuthCard />
+              </div>
+            </div>
           </div>
         </section>
 
-        {/* Features Grid */}
-        <section className="py-12 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto">
+        {/* Feature Cards Grid */}
+        <section className="py-12 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto w-full">
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
             <div className="bg-white border border-stormy-border rounded-2xl p-6 shadow-card hover:shadow-elevated transition-shadow">
               <div className="w-10 h-10 rounded-xl bg-stormy-mist/40 border border-stormy-mist flex items-center justify-center text-stormy-dark mb-4">

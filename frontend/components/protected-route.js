@@ -12,7 +12,7 @@ export function ProtectedRoute({ children }) {
   useEffect(() => {
     if (!loading && !isAuthenticated) {
       const returnUrl = encodeURIComponent(pathname || '/profile');
-      router.replace(`/login?returnUrl=${returnUrl}`);
+      router.replace(`/?auth=login&returnUrl=${returnUrl}`);
     }
   }, [loading, isAuthenticated, router, pathname]);
 
@@ -28,7 +28,6 @@ export function ProtectedRoute({ children }) {
   }
 
   if (!isAuthenticated) {
-    // Avoid flashing protected contents while redirect is happening
     return null;
   }
 

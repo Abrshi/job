@@ -16,9 +16,22 @@ export function Navbar() {
     setIsLoggingOut(true);
     try {
       await logout();
-      router.push('/login');
+      router.push('/');
     } finally {
       setIsLoggingOut(false);
+    }
+  };
+
+  const scrollToAuth = (e) => {
+    e?.preventDefault?.();
+    const el = document.getElementById('auth-card');
+    if (el) {
+      el.scrollIntoView({ behavior: 'smooth' });
+      setTimeout(() => {
+        el.querySelector('input')?.focus();
+      }, 400);
+    } else {
+      router.push('/#auth-card');
     }
   };
 
@@ -88,16 +101,12 @@ export function Navbar() {
               </div>
             ) : (
               <div className="flex items-center gap-3">
-                <Link href="/login">
-                  <Button variant="ghost" size="sm">
-                    Sign In
-                  </Button>
-                </Link>
-                <Link href="/register">
-                  <Button variant="cta" size="sm">
-                    Get Started
-                  </Button>
-                </Link>
+                <Button variant="ghost" size="sm" onClick={scrollToAuth}>
+                  Sign In
+                </Button>
+                <Button variant="cta" size="sm" onClick={scrollToAuth}>
+                  Get Started
+                </Button>
               </div>
             )}
           </div>
@@ -159,16 +168,28 @@ export function Navbar() {
             </>
           ) : (
             <div className="pt-2 border-t border-stormy-border flex flex-col gap-2">
-              <Link href="/login" onClick={() => setIsMobileMenuOpen(false)}>
-                <Button variant="outline" size="md" className="w-full">
-                  Sign In
-                </Button>
-              </Link>
-              <Link href="/register" onClick={() => setIsMobileMenuOpen(false)}>
-                <Button variant="cta" size="md" className="w-full">
-                  Get Started
-                </Button>
-              </Link>
+              <Button
+                variant="outline"
+                size="md"
+                className="w-full"
+                onClick={(e) => {
+                  setIsMobileMenuOpen(false);
+                  scrollToAuth(e);
+                }}
+              >
+                Sign In
+              </Button>
+              <Button
+                variant="cta"
+                size="md"
+                className="w-full"
+                onClick={(e) => {
+                  setIsMobileMenuOpen(false);
+                  scrollToAuth(e);
+                }}
+              >
+                Get Started
+              </Button>
             </div>
           )}
         </div>
