@@ -7,10 +7,17 @@ const globalForPrisma = globalThis as unknown as {
 };
 
 const createPrismaClient = (): PrismaClient => {
-  const adapter = new PrismaMariaDb(env.DATABASE_URL);
+  let connStr = env.DATABASE_URL;
+  if (connStr.startsWith('mysql://')) {
+    connStr = 'mariadb://' + connStr.slice('mysql://'.length);
+  }
+  if (connStr.includes('socket=') && !connStr.includes('socketPath=')) {
+    connStr = connStr.replace('socket=', 'socketPath=');
+  }
+  const adapter = new PrismaMariaDb(connStr);
   return new PrismaClient({
     adapter,
-    log: env.NODE_ENV === 'development' ? ['query', 'error', 'warn'] : ['error'],
+    log: env.NODE_ENV === 'development' ? ['error', 'warn'] : ['error'],
   });
 };
 
@@ -19,4 +26,3 @@ export const prisma = globalForPrisma.prisma ?? createPrismaClient();
 if (env.NODE_ENV !== 'production') {
   globalForPrisma.prisma = prisma;
 }
-

@@ -64,6 +64,15 @@ export function Navbar() {
                   My Profile
                 </Link>
               )}
+              {isAuthenticated && user?.role === 'ADMIN' && (
+                <Link
+                  href="/admin"
+                  className="font-semibold text-stormy-sky hover:text-stormy-skyHover transition-colors flex items-center gap-1.5"
+                >
+                  <span className="w-1.5 h-1.5 rounded-full bg-stormy-sky" />
+                  Admin Console
+                </Link>
+              )}
             </nav>
           </div>
 
@@ -74,7 +83,7 @@ export function Navbar() {
             ) : isAuthenticated ? (
               <div className="flex items-center gap-4">
                 <Link
-                  href="/profile"
+                  href={user?.role === 'ADMIN' ? '/admin' : '/profile'}
                   className="flex items-center gap-2.5 p-1.5 rounded-lg hover:bg-stormy-canvas transition-colors text-left"
                 >
                   <div className="w-8 h-8 rounded-full bg-stormy-mist/50 border border-stormy-mist flex items-center justify-center text-xs font-semibold text-stormy-dark">
@@ -151,6 +160,15 @@ export function Navbar() {
               >
                 My Profile ({displayName})
               </Link>
+              {user?.role === 'ADMIN' && (
+                <Link
+                  href="/admin"
+                  onClick={() => setIsMobileMenuOpen(false)}
+                  className="block py-2 text-sm font-bold text-stormy-sky hover:text-stormy-skyHover"
+                >
+                  Admin Console &rarr;
+                </Link>
+              )}
               <div className="pt-2 border-t border-stormy-border">
                 <Button
                   variant="outline"

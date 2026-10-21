@@ -41,7 +41,7 @@ export class AuthController {
   refresh = async (req: Request, res: Response) => {
     const token = req.cookies?.[COOKIE_NAME] || req.body?.refreshToken;
     if (!token) {
-      throw new AppError('Refresh token required', 400);
+      throw AppError.badRequest('Refresh token required', 'REFRESH_TOKEN_REQUIRED');
     }
 
     const tokens = await this.service.refresh(token);
@@ -68,7 +68,7 @@ export class AuthController {
 
   me = async (req: Request, res: Response) => {
     if (!req.user) {
-      throw new AppError('Unauthorized', 401);
+      throw AppError.unauthorized('Authentication required', 'AUTHENTICATION_REQUIRED');
     }
     const user = await this.service.getCurrentUser(req.user.userId);
     res.status(200).json({

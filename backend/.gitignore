@@ -22,3 +22,8 @@ coverage/
 .DS_Store
 Thumbs.db
 
+# Local database runtime files
+.mariadb_data/
+.mariadb.pid
+*.sock
+

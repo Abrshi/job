@@ -2,12 +2,14 @@
 
 import React, { useState } from 'react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import { useAuth } from '@/hooks/use-auth';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Alert } from '@/components/ui/alert';
 
 export function AuthCard({ initialTab = 'login' }) {
+  const router = useRouter();
   const { user, isAuthenticated, loading: authLoading, login, register, logout } = useAuth();
 
   // Active view: 'login' | 'register' | 'forgot-password'
@@ -63,9 +65,30 @@ export function AuthCard({ initialTab = 'login' }) {
 
     setIsLoggingIn(true);
     try {
-      await login(loginEmail, loginPassword);
+      const loggedUser = await login(loginEmail, loginPassword);
+
+      // Determine dashboard destination based on role (e.g. ADMIN -> /admin, USER -> /profile)
+      let target = loggedUser?.role === 'ADMIN' ? '/admin' : '/profile';
+
+      if (typeof window !== 'undefined') {
+        const params = new URLSearchParams(window.location.search);
+        const returnUrl = params.get('returnUrl');
+        if (returnUrl && returnUrl.startsWith('/') && !returnUrl.startsWith('//')) {
+          // If non-admin attempts to access admin route via returnUrl, divert to profile
+          if (returnUrl.startsWith('/admin') && loggedUser?.role !== 'ADMIN') {
+            target = '/profile';
+          } else {
+            target = returnUrl;
+          }
+        }
+      }
+
+      router.push(target);
     } catch (err) {
       setLoginSubmitError(err.message || 'Invalid email or password.');
+      if (err?.fieldErrors && Object.keys(err.fieldErrors).length > 0) {
+        setLoginErrors(err.fieldErrors);
+      }
     } finally {
       setIsLoggingIn(false);
     }
@@ -110,6 +133,9 @@ export function AuthCard({ initialTab = 'login' }) {
       setRegSuccess(true);
     } catch (err) {
       setRegSubmitError(err.message || 'Registration failed. Email may already be in use.');
+      if (err?.fieldErrors && Object.keys(err.fieldErrors).length > 0) {
+        setRegErrors((prev) => ({ ...prev, ...err.fieldErrors }));
+      }
     } finally {
       setIsRegistering(false);
     }
@@ -149,6 +175,9 @@ export function AuthCard({ initialTab = 'login' }) {
   if (isAuthenticated && !authLoading && user) {
     const fullName = [user.firstName, user.lastName].filter(Boolean).join(' ') || 'User';
     const initial = (user.firstName || user.email).charAt(0).toUpperCase();
+    const isAdmin = user.role === 'ADMIN';
+    const dashboardHref = isAdmin ? '/admin' : '/profile';
+    const dashboardLabel = isAdmin ? 'Go to Admin Console' : 'Go to Profile & Dashboard';
 
     return (
       <div className="w-full bg-white border border-stormy-border rounded-2xl p-6 sm:p-8 shadow-card space-y-6">
@@ -161,7 +190,11 @@ export function AuthCard({ initialTab = 'login' }) {
               <h3 className="text-lg font-bold text-stormy-main tracking-tight">
                 Welcome back, {fullName}
               </h3>
-              <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold uppercase bg-stormy-mist/40 text-stormy-dark border border-stormy-mist">
+              <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold uppercase ${
+                isAdmin
+                  ? 'bg-stormy-sky text-stormy-dark border border-stormy-sky'
+                  : 'bg-stormy-mist/40 text-stormy-dark border border-stormy-mist'
+              }`}>
                 {user.role}
               </span>
             </div>
@@ -171,14 +204,16 @@ export function AuthCard({ initialTab = 'login' }) {
 
         <Alert variant={user.isEmailVerified ? 'success' : 'warning'}>
           {user.isEmailVerified
-            ? 'Your account is verified and active. You have full access to personalized job matching.'
-            : 'Email verification is pending. Please verify your email to unlock CV uploads.'}
+            ? (isAdmin
+                ? 'Your administrator credentials are confirmed. You have full access to platform governance and controls.'
+                : 'Your account is verified and active. You have full access to personalized job matching.')
+            : 'Email verification is pending. Please verify your email to unlock all platform features.'}
         </Alert>
 
         <div className="space-y-3 pt-2">
-          <Link href="/profile" className="block w-full">
+          <Link href={dashboardHref} className="block w-full">
             <Button variant="primary" size="md" className="w-full">
-              Go to Profile &amp; Dashboard
+              {dashboardLabel}
             </Button>
           </Link>
           <Button variant="outline" size="md" className="w-full" onClick={logout}>
