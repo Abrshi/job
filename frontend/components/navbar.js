@@ -56,13 +56,21 @@ export function Navbar() {
 
             {/* Desktop Navigation */}
             <nav className="hidden md:flex items-center gap-6 text-sm font-medium text-stormy-muted">
-              <Link href="/" className="hover:text-stormy-dark transition-colors">
+              <Link href="/jobs" className="hover:text-stormy-dark transition-colors">
                 Browse Jobs
               </Link>
               {isAuthenticated && (
-                <Link href="/profile" className="hover:text-stormy-dark transition-colors">
-                  My Profile
-                </Link>
+                <>
+                  <Link href="/jobs/saved" className="hover:text-stormy-dark transition-colors">
+                    Saved Jobs
+                  </Link>
+                  <Link href="/jobs/applications" className="hover:text-stormy-dark transition-colors">
+                    Applications
+                  </Link>
+                  <Link href="/profile" className="hover:text-stormy-dark transition-colors">
+                    Profile
+                  </Link>
+                </>
               )}
               {isAuthenticated && user?.role === 'ADMIN' && (
                 <Link
@@ -144,7 +152,7 @@ export function Navbar() {
       {isMobileMenuOpen && (
         <div className="md:hidden border-t border-stormy-border bg-white px-4 pt-2 pb-4 space-y-3 shadow-card">
           <Link
-            href="/"
+            href="/jobs"
             onClick={() => setIsMobileMenuOpen(false)}
             className="block py-2 text-sm font-medium text-stormy-muted hover:text-stormy-dark"
           >
@@ -153,6 +161,20 @@ export function Navbar() {
 
           {isAuthenticated ? (
             <>
+              <Link
+                href="/jobs/saved"
+                onClick={() => setIsMobileMenuOpen(false)}
+                className="block py-2 text-sm font-medium text-stormy-muted hover:text-stormy-dark"
+              >
+                Saved Jobs
+              </Link>
+              <Link
+                href="/jobs/applications"
+                onClick={() => setIsMobileMenuOpen(false)}
+                className="block py-2 text-sm font-medium text-stormy-muted hover:text-stormy-dark"
+              >
+                My Applications
+              </Link>
               <Link
                 href="/profile"
                 onClick={() => setIsMobileMenuOpen(false)}

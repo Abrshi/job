@@ -5,12 +5,28 @@ import { AppError } from './error-handler';
 export const validate = (schema: ZodTypeAny) => {
   return async (req: Request, res: Response, next: NextFunction) => {
     try {
-      await schema.parseAsync({
+      const parsed = (await schema.parseAsync({
         body: req.body,
         query: req.query,
         params: req.params,
         cookies: req.cookies,
-      });
+      })) as any;
+
+      if (parsed.body !== undefined) req.body = parsed.body;
+      if (parsed.query !== undefined) {
+        try {
+          req.query = parsed.query;
+        } catch {
+          Object.assign(req.query, parsed.query);
+        }
+      }
+      if (parsed.params !== undefined) {
+        try {
+          req.params = parsed.params;
+        } catch {
+          Object.assign(req.params, parsed.params);
+        }
+      }
       next();
     } catch (error) {
       if (error instanceof ZodError) {

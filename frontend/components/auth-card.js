@@ -67,16 +67,16 @@ export function AuthCard({ initialTab = 'login' }) {
     try {
       const loggedUser = await login(loginEmail, loginPassword);
 
-      // Determine dashboard destination based on role (e.g. ADMIN -> /admin, USER -> /profile)
-      let target = loggedUser?.role === 'ADMIN' ? '/admin' : '/profile';
+      // Determine destination based on role (ADMIN -> /admin, Job Seeker / CANDIDATE -> /jobs)
+      let target = loggedUser?.role === 'ADMIN' ? '/admin' : '/jobs';
 
       if (typeof window !== 'undefined') {
         const params = new URLSearchParams(window.location.search);
         const returnUrl = params.get('returnUrl');
         if (returnUrl && returnUrl.startsWith('/') && !returnUrl.startsWith('//')) {
-          // If non-admin attempts to access admin route via returnUrl, divert to profile
+          // If non-admin attempts to access admin route via returnUrl, divert to /jobs
           if (returnUrl.startsWith('/admin') && loggedUser?.role !== 'ADMIN') {
-            target = '/profile';
+            target = '/jobs';
           } else {
             target = returnUrl;
           }
