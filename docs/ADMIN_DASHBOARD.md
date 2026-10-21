@@ -20,8 +20,11 @@ The **Admin Dashboard** provides a centralized, secure, role-protected interface
 
 ### Technology Stack
 - **Frontend**: Next.js 16 (App Router), React 19, Tailwind CSS v4, Lucide Icons.
-- **Backend**: Express.js, TypeScript, Prisma ORM 5.22.
-- **Database**: MySQL (`job` database accessed locally via port 3306 and phpMyAdmin).
+- **Backend**: Express.js, TypeScript, Prisma ORM 7.10 with Driver Adapters.
+- **Database**: Dual Database Engine Support:
+  - **Local Development**: MySQL / MariaDB (connected via `@prisma/adapter-mariadb`).
+  - **Cloud / Production**: PostgreSQL (connected via `@prisma/adapter-pg` and `pg.Pool`).
+  - Seamless automatic switching controlled purely via `.env` (`DATABASE_URL` protocol or `DB_PROVIDER`).
 - **Authentication**: JWT access token in authorization header + HTTP-only refresh token session cookies.
 
 ### Prisma Schema Models for Administration
@@ -243,7 +246,40 @@ npm run seed
 
 ---
 
-## 6. Role-Based Post-Login Dashboard Redirection
+## 6. Environment-Driven Dual Database Configuration (MySQL vs PostgreSQL)
+
+The platform supports seamless switching between **MySQL** (for local development) and **PostgreSQL** (for staging / cloud / production databases such as Supabase, Neon, Railway, or AWS RDS) controlled purely via your `.env` configuration.
+
+### How It Works:
+1. **Auto-Detection**:
+   - The backend inspects `process.env.DB_PROVIDER` and the protocol of `process.env.DATABASE_URL`.
+   - `mysql://` or `mariadb://` or `DB_PROVIDER=mysql` &rarr; activates MySQL driver adapter (`@prisma/adapter-mariadb`).
+   - `postgresql://` or `postgres://` or `DB_PROVIDER=postgres` &rarr; activates PostgreSQL driver adapter (`@prisma/adapter-pg` + `pg.Pool`).
+2. **Schema Synchronization**:
+   - `prisma/schema.mysql.prisma`: Tailored for MySQL/MariaDB with native types (`@db.LongText`, etc.).
+   - `prisma/schema.postgresql.prisma`: Tailored for PostgreSQL with native types (`String @db.Text`, etc.).
+   - Running `npm run db:sync` or `npm run dev` or `npm run prisma:push` automatically detects the provider, synchronizes `prisma/schema.prisma`, and runs `prisma generate` in under 300ms.
+3. **Switching Instructions**:
+   - **For Local MySQL**:
+     ```env
+     DB_PROVIDER=mysql
+     DATABASE_URL="mysql://root:gyam@localhost:3306/job"
+     ```
+   - **For Cloud / Production PostgreSQL**:
+     ```env
+     DB_PROVIDER=postgresql
+     DATABASE_URL="postgresql://username:password@host:5432/dbname?schema=public"
+     ```
+   - Sync the database schema to the active engine:
+     ```bash
+     cd backend
+     npm run prisma:push
+     npm run seed
+     ```
+
+---
+
+## 7. Role-Based Post-Login Dashboard Redirection
 
 When users authenticate via the landing page (`/`) sliding card or dedicated `/login` page:
 1. **Administrator Accounts (`role === 'ADMIN'`)**:

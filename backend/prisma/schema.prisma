@@ -1,5 +1,5 @@
-// This is your Prisma schema file,
-// learn more about it in the docs: https://pris.ly/d/prisma-schema
+// Prisma schema file for MySQL / MariaDB (Local Development)
+// Source: backend/prisma/schema.mysql.prisma
 
 generator client {
   provider = "prisma-client-js"
@@ -265,4 +265,3 @@ model AdminAuditLog {
   @@index([targetType])
   @@map("admin_audit_logs")
 }
-

@@ -7,6 +7,7 @@ const envSchema = z.object({
   NODE_ENV: z.enum(['development', 'test', 'production']).default('development'),
   PORT: z.coerce.number().default(5000),
   DATABASE_URL: z.string().min(1, 'DATABASE_URL is required'),
+  DB_PROVIDER: z.enum(['mysql', 'mariadb', 'postgres', 'postgresql']).optional(),
   FRONTEND_ORIGIN: z.string().default('http://localhost:3000'),
   ACCESS_TOKEN_SECRET: z.string().min(16, 'ACCESS_TOKEN_SECRET must be at least 16 characters'),
   REFRESH_TOKEN_SECRET: z.string().min(16, 'REFRESH_TOKEN_SECRET must be at least 16 characters'),
@@ -28,4 +29,17 @@ const parseEnv = (): Env => {
 };
 
 export const env = parseEnv();
+
+export const getDatabaseProvider = (): 'mysql' | 'postgresql' => {
+  if (env.DB_PROVIDER) {
+    const p = env.DB_PROVIDER.toLowerCase();
+    if (p.includes('postgre') || p === 'pg') return 'postgresql';
+    if (p.includes('mysql') || p.includes('mariadb')) return 'mysql';
+  }
+  const url = env.DATABASE_URL.toLowerCase();
+  if (url.startsWith('postgres://') || url.startsWith('postgresql://')) {
+    return 'postgresql';
+  }
+  return 'mysql';
+};
 
