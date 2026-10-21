@@ -1,5 +1,5 @@
-// This is your Prisma schema file,
-// learn more about it in the docs: https://pris.ly/d/prisma-schema
+// Prisma schema file for MySQL / MariaDB (Local Development)
+// Source: backend/prisma/schema.mysql.prisma
 
 generator client {
   provider = "prisma-client-js"
@@ -15,6 +15,70 @@ enum Role {
   ADMIN
 }
 
+enum SourceType {
+  API
+  RSS
+  SCRAPER
+}
+
+enum WorkArrangement {
+  ON_SITE
+  HYBRID
+  REMOTE
+}
+
+enum EmploymentType {
+  FULL_TIME
+  PART_TIME
+  CONTRACT
+  INTERNSHIP
+  FREELANCE
+}
+
+enum ExperienceLevel {
+  ENTRY
+  JUNIOR
+  MID
+  SENIOR
+  LEAD
+  EXECUTIVE
+  UNSPECIFIED
+}
+
+enum SalaryPeriod {
+  HOURLY
+  MONTHLY
+  YEARLY
+}
+
+enum JobStatus {
+  ACTIVE
+  EXPIRED
+  CLOSED
+  ARCHIVED
+}
+
+enum ClassificationStatus {
+  PENDING
+  CLASSIFIED
+  FAILED
+  REVIEW_REQUIRED
+}
+
+enum ClassificationReviewStatus {
+  AUTO_APPROVED
+  NEEDS_REVIEW
+  MANUALLY_REVIEWED
+  REJECTED
+}
+
+enum RunStatus {
+  RUNNING
+  SUCCESS
+  PARTIAL_SUCCESS
+  FAILED
+}
+
 model User {
   id              String           @id @default(uuid())
   email           String           @unique
@@ -22,6 +86,8 @@ model User {
   firstName       String?
   lastName        String?
   role            Role             @default(CANDIDATE)
+  isActive        Boolean          @default(true)
+  lastLoginAt     DateTime?
   isEmailVerified Boolean          @default(false)
   createdAt       DateTime         @default(now())
   updatedAt       DateTime         @updatedAt
@@ -42,4 +108,160 @@ model RefreshSession {
 
   @@index([userId])
   @@map("refresh_sessions")
+}
+
+model JobSource {
+  id              String          @id @default(uuid())
+  name            String
+  slug            String          @unique
+  type            SourceType      @default(API)
+  endpointUrl     String          @db.Text
+  isActive        Boolean         @default(true)
+  pollingInterval Int             @default(60) // in minutes
+  lastRunAt       DateTime?
+  lastSuccessAt   DateTime?
+  nextRunAt       DateTime?
+  headers         Json?           // Encrypted or secret headers excluded from public responses
+  createdAt       DateTime        @default(now())
+  updatedAt       DateTime        @updatedAt
+  jobs            Job[]
+  runs            CollectionRun[]
+
+  @@map("job_sources")
+}
+
+model JobCategory {
+  id              String              @id @default(uuid())
+  name            String
+  slug            String              @unique
+  description     String?             @db.Text
+  isActive        Boolean             @default(true)
+  createdAt       DateTime            @default(now())
+  updatedAt       DateTime            @updatedAt
+  jobs            Job[]
+  classifications JobClassification[]
+
+  @@map("job_categories")
+}
+
+model Job {
+  id                       String                @id @default(uuid())
+  sourceId                 String
+  source                   JobSource             @relation(fields: [sourceId], references: [id], onDelete: Cascade)
+  externalId               String?
+  fingerprint              String                // Stable source-specific identity hash
+  originalUrl              String                @db.Text
+  applicationUrl           String?               @db.Text
+  rawPayload               Json?
+  originalTitle            String
+  originalDescription      String                @db.LongText
+  normalizedTitle          String
+  normalizedDescription    String                @db.LongText
+  companyName              String?
+  country                  String?
+  city                     String?
+  isRemote                 Boolean               @default(false)
+  workArrangement          WorkArrangement       @default(ON_SITE)
+  remoteEligibility        String?
+  employmentType           EmploymentType?
+  experienceLevel          ExperienceLevel?
+  salaryMin                Decimal?              @db.Decimal(12, 2)
+  salaryMax                Decimal?              @db.Decimal(12, 2)
+  salaryCurrency           String?
+  salaryPeriod             SalaryPeriod?
+  publishedAt              DateTime?
+  closingDate              DateTime?
+  firstSeenAt              DateTime              @default(now())
+  lastSeenAt               DateTime              @default(now())
+  expiredAt                DateTime?
+  status                   JobStatus             @default(ACTIVE)
+  categoryId               String?
+  category                 JobCategory?          @relation(fields: [categoryId], references: [id], onDelete: SetNull)
+  classificationStatus     ClassificationStatus  @default(PENDING)
+  classificationConfidence Decimal?              @db.Decimal(4, 3)
+  createdAt                DateTime              @default(now())
+  updatedAt                DateTime              @updatedAt
+  classifications          JobClassification[]
+
+  @@unique([sourceId, fingerprint])
+  @@index([sourceId])
+  @@index([categoryId])
+  @@index([status])
+  @@index([publishedAt])
+  @@index([externalId])
+  @@map("jobs")
+}
+
+model JobClassification {
+  id                       String                     @id @default(uuid())
+  jobId                    String
+  job                      Job                        @relation(fields: [jobId], references: [id], onDelete: Cascade)
+  categoryId               String?
+  category                 JobCategory?               @relation(fields: [categoryId], references: [id], onDelete: SetNull)
+  predictedCategoryName    String
+  predictedExperienceLevel ExperienceLevel?
+  confidence               Decimal                    @db.Decimal(4, 3)
+  status                   ClassificationReviewStatus @default(NEEDS_REVIEW)
+  explanation              String?                    @db.Text
+  extractedSkills          Json?
+  modelIdentifier          String
+  promptVersion            String
+  isCurrent                Boolean                    @default(true)
+  createdAt                DateTime                   @default(now())
+
+  @@index([jobId])
+  @@index([isCurrent])
+  @@map("job_classifications")
+}
+
+model CollectionRun {
+  id             String     @id @default(uuid())
+  sourceId       String
+  source         JobSource  @relation(fields: [sourceId], references: [id], onDelete: Cascade)
+  startedAt      DateTime   @default(now())
+  finishedAt     DateTime?
+  status         RunStatus  @default(RUNNING)
+  recordsFetched Int        @default(0)
+  jobsCreated    Int        @default(0)
+  jobsUpdated    Int        @default(0)
+  jobsSkipped    Int        @default(0)
+  errorSummary   String?    @db.Text
+  checkpoint     Json?
+  createdAt      DateTime   @default(now())
+
+  @@index([sourceId])
+  @@index([startedAt])
+  @@map("collection_runs")
+}
+
+model SiteSetting {
+  id           String   @id @default("default")
+  siteName     String   @default("JobSphere")
+  tagline      String   @default("Job Aggregation Platform")
+  description  String?  @db.Text
+  logoUrl      String?  @db.Text
+  faviconUrl   String?  @db.Text
+  supportEmail String?
+  footerText   String?
+  updatedAt    DateTime @updatedAt
+  createdAt    DateTime @default(now())
+
+  @@map("site_settings")
+}
+
+model AdminAuditLog {
+  id         String   @id @default(uuid())
+  adminId    String
+  adminEmail String
+  action     String
+  targetType String
+  targetId   String?
+  details    Json?
+  ipAddress  String?
+  createdAt  DateTime @default(now())
+
+  @@index([adminId])
+  @@index([action])
+  @@index([targetType])
+  @@map("admin_audit_logs")
 }

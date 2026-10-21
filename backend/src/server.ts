@@ -2,14 +2,22 @@ import app from './app';
 import { env } from './config/env';
 import { logger } from './lib/logger';
 import { prisma } from './lib/prisma';
+import { sourceScheduler } from './modules/scheduler/scheduler.service';
 
 const server = app.listen(env.PORT, () => {
   logger.info(`Server running in ${env.NODE_ENV} mode on port ${env.PORT}`);
   logger.info(`Health check available at http://localhost:${env.PORT}/api/v1/health`);
+
+  // Start background job source scheduler
+  sourceScheduler.start();
 });
 
 const handleShutdown = async (signal: string) => {
   logger.info(`Received ${signal}. Starting graceful shutdown...`);
+
+  // Stop dynamic scheduler timer
+  sourceScheduler.stop();
+
   server.close(async () => {
     logger.info('HTTP server closed.');
     try {
@@ -30,4 +38,3 @@ const handleShutdown = async (signal: string) => {
 
 process.on('SIGTERM', () => handleShutdown('SIGTERM'));
 process.on('SIGINT', () => handleShutdown('SIGINT'));
-

@@ -30,7 +30,9 @@ export class AuthService {
   async register(dto: RegisterDTO): Promise<{ user: UserResponse; tokens: AuthTokens }> {
     const existing = await this.repo.findByEmail(dto.email);
     if (existing) {
-      throw new AppError('Email is already registered', 409);
+      throw AppError.conflict('Email is already registered', 'EMAIL_ALREADY_EXISTS', [
+        { field: 'email', message: 'Email is already registered' },
+      ]);
     }
 
     const passwordHash = await argon2.hash(dto.password, {
@@ -70,12 +72,12 @@ export class AuthService {
   async login(dto: LoginDTO): Promise<{ user: UserResponse; tokens: AuthTokens }> {
     const user = await this.repo.findByEmail(dto.email);
     if (!user) {
-      throw new AppError('Invalid email or password', 401);
+      throw AppError.unauthorized('Invalid email or password', 'INVALID_CREDENTIALS');
     }
 
     const isMatch = await argon2.verify(user.passwordHash, dto.password);
     if (!isMatch) {
-      throw new AppError('Invalid email or password', 401);
+      throw AppError.unauthorized('Invalid email or password', 'INVALID_CREDENTIALS');
     }
 
     const tokens = this.generateTokens({
@@ -106,14 +108,14 @@ export class AuthService {
     try {
       jwt.verify(refreshToken, env.REFRESH_TOKEN_SECRET);
     } catch {
-      throw new AppError('Invalid or expired refresh token', 401);
+      throw AppError.unauthorized('Invalid or expired refresh token', 'INVALID_REFRESH_TOKEN');
     }
 
     const tokenHash = this.hashToken(refreshToken);
     const session = await this.repo.findSessionByTokenHash(tokenHash);
 
     if (!session || session.isRevoked || session.expiresAt < new Date()) {
-      throw new AppError('Refresh token is invalid or has been revoked', 401);
+      throw AppError.unauthorized('Refresh token is invalid or has been revoked', 'INVALID_REFRESH_TOKEN');
     }
 
     // Revoke old session (Rotation)
@@ -145,7 +147,7 @@ export class AuthService {
   async getCurrentUser(userId: string): Promise<UserResponse> {
     const user = await this.repo.findById(userId);
     if (!user) {
-      throw new AppError('User not found', 404);
+      throw AppError.notFound('User not found', 'USER_NOT_FOUND');
     }
 
     return {

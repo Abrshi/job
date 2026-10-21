@@ -4,20 +4,24 @@
   "description": "",
   "main": "index.js",
   "scripts": {
-    "dev": "tsx watch src/server.ts",
-    "build": "tsc",
+    "dev": "npm run db:sync && tsx watch src/server.ts",
+    "build": "npm run db:sync && tsc",
     "start": "node dist/server.js",
     "typecheck": "tsc --noEmit",
-    "prisma:generate": "prisma generate",
-    "prisma:migrate": "prisma migrate dev",
-    "prisma:studio": "prisma studio",
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "db:sync": "tsx scripts/sync-database-schema.ts",
+    "prisma:generate": "tsx scripts/sync-database-schema.ts && prisma generate",
+    "prisma:push": "tsx scripts/sync-database-schema.ts && prisma db push",
+    "prisma:migrate": "tsx scripts/sync-database-schema.ts && prisma migrate dev",
+    "prisma:studio": "tsx scripts/sync-database-schema.ts && prisma studio",
+    "seed": "tsx src/seeds/index.ts",
+    "test": "tsx --test \"tests/**/*.test.ts\""
   },
   "keywords": [],
   "author": "",
   "license": "ISC",
   "dependencies": {
     "@prisma/adapter-mariadb": "^7.10.1",
+    "@prisma/adapter-pg": "^7.10.1",
     "@prisma/client": "^7.10.1",
     "argon2": "^0.45.1",
     "cookie-parser": "^1.4.7",
@@ -27,6 +31,7 @@
     "express-rate-limit": "^8.7.1",
     "jsonwebtoken": "^9.0.3",
     "mariadb": "^3.5.4",
+    "pg": "^8.23.1",
     "zod": "^4.6.7"
   },
   "devDependencies": {
@@ -35,6 +40,7 @@
     "@types/express": "^5.0.6",
     "@types/jsonwebtoken": "^9.0.10",
     "@types/node": "^26.6.5",
+    "@types/pg": "^8.23.1",
     "prisma": "^7.10.1",
     "tsx": "^4.23.15",
     "typescript": "^7.0.2"

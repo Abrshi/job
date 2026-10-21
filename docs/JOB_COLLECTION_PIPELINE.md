@@ -1,0 +1,237 @@
+# Job Collection Pipeline & Admin Source Management Documentation
+
+## 1. Overview & Architecture
+
+The Job Collection Pipeline provides automated, resilient ingestion, normalization, deduplication, and AI-driven classification of job postings from diverse external job providers into a MySQL database via Prisma ORM.
+
+### Architecture Components
+
+```
+                   +----------------------------------+
+                   |     Dynamic Source Scheduler     |
+                   |   (Per-source polling timers)    |
+                   +----------------+-----------------+
+                                    | Triggers run (with concurrency cap = 3)
+                                    v
+                   +----------------------------------+
+                   |       SourcesService (Run)       |
+                   +----------------+-----------------+
+                                    | Resolves registered adapter
+                                    v
+                   +----------------------------------+
+                   |     Source Adapter Registry      |
+                   |   (e.g., AfriworkAdapter)        |
+                   +----------------+-----------------+
+                                    | Fetches external job records
+                                    v
+                   +----------------------------------+
+                   | Normalization & Deduplication    |
+                   | (Fingerprint: ext > url > hash)  |
+                   +----------------+-----------------+
+                                    | Upserts into MySQL
+                                    v
+                   +----------------------------------+
+                   |    Asynchronous AI Classifier    |
+                   | (Gemini 1.5 Flash + Heuristics)  |
+                   +----------------+-----------------+
+                                    | Categorizes & updates audit history
+                                    v
+                   +----------------------------------+
+                   |  Job Classifications & Database  |
+                   +----------------------------------+
+```
+
+---
+
+## 2. Database Schema & Data Models
+
+### A. JobSource (`job_sources`)
+Represents an external provider feed or API endpoint.
+- `id`: UUID (Primary Key)
+- `name`: Human-readable source name (e.g., "Afriwork")
+- `slug`: Unique identifier key (`@unique`, e.g., "afriwork")
+- `sourceType`: Enum (`API`, `RSS`, `SCRAPER`)
+- `endpointUrl`: Feed or GraphQL/REST URL (`VARCHAR(1000)`)
+- `headers`: Optional JSON storing authentication tokens or custom headers (sanitized and stripped from administrative read responses)
+- `isActive`: Boolean flag controlling automated scheduler polling
+- `pollingInterval`: Polling period in minutes (validated between 5 and 10080 minutes)
+- `lastRunAt`, `lastSuccessAt`, `nextRunAt`: Timestamp tracking for scheduler orchestration
+
+### B. Job (`jobs`)
+Normalized canonical job vacancy records.
+- `id`: UUID (Primary Key)
+- `sourceId`: Foreign Key referencing `job_sources.id`
+- `externalId`: Source-specific identifier (e.g., Afriwork vacancy ID)
+- `fingerprint`: Unique hash string for duplicate prevention (`ext:<id>`, `url:<sha256>`, or `content:<sha256>`)
+- `categoryId`: Foreign Key referencing `job_categories.id` (primary assigned category)
+- `classificationStatus`: Enum (`PENDING`, `CLASSIFIED`, `NEEDS_REVIEW`, `FAILED`)
+- `status`: Enum (`DRAFT`, `PUBLISHED`, `EXPIRED`, `ARCHIVED`)
+- `closingDate`: Expiration timestamp specified by source
+- `expiresAt`: Enforced expiration timestamp (source closing date or 30-day fallback from `firstSeenAt`)
+- Constraints: `@@unique([sourceId, fingerprint])` prevents duplicates per provider without merging across sources.
+
+### C. JobCategory (`job_categories`)
+The 20 predefined industry standard taxonomy categories.
+- `id`: UUID (Primary Key)
+- `name`: Category title (e.g., "Software & IT")
+- `slug`: Unique URL-friendly slug (`@unique`)
+- `description`: Textual summary utilized by the AI classification system prompt
+
+### D. JobClassification (`job_classifications`)
+Audit log and history of AI/heuristic classification passes for a job.
+- `id`: UUID (Primary Key)
+- `jobId`: Foreign Key referencing `jobs.id`
+- `categoryId`: Reference to predicted `job_categories.id`
+- `confidence`: Decimal score between `0.00` and `1.00`
+- `status`: Classification review state (`AUTO_ACCEPTED`, `NEEDS_REVIEW`, `REJECTED`)
+- `modelIdentifier`: AI model name (e.g., `gemini-1.5-flash` or `gemini-1.5-flash-heuristic-fallback`)
+- `promptVersion`: System prompt version string (e.g., `v1.0.0`)
+- `isCurrent`: Boolean flag designating the single active source of truth. When reclassifying, previous records transition to `isCurrent = false`.
+
+### E. CollectionRun (`collection_runs`)
+Execution history and observability metrics for data ingestion passes.
+- `id`: UUID (Primary Key)
+- `sourceId`: Foreign Key referencing `job_sources.id`
+- `status`: Enum (`RUNNING`, `SUCCESS`, `FAILED`, `PARTIAL`)
+- `startedAt`, `finishedAt`: Execution timestamps
+- `recordsFetched`, `jobsCreated`, `jobsUpdated`, `jobsSkipped`: Numerical metrics
+- `errorSummary`: Detailed error diagnostic when runs encounter issues
+
+---
+
+## 3. Afriwork Integration Findings & Adapter Implementation
+
+### Endpoint Investigation Findings
+- **Target Endpoint:** `https://api.afriworket.com/v1/graphql`
+- **Authentication Model:**
+  - Live inspection demonstrated that Afriwork utilizes a Hasura GraphQL engine backed by an authentication webhook (`Nuxt` web client with Bearer session authorization).
+  - Anonymous HTTP POST requests to `https://api.afriworket.com/v1/graphql` return HTTP 200 with GraphQL error:
+    ```json
+    {
+      "errors": [
+        {
+          "extensions": {
+            "code": "access-denied",
+            "path": "$"
+          },
+          "message": "Authentication hook unauthorized this request"
+        }
+      ]
+    }
+    ```
+- **Architectural Decision:**
+  - Per project requirements, the seeded `afriwork` source is created in an **inactive** state (`isActive: false`).
+  - The `AfriworkAdapter` supports dynamic credentials passed through the `JobSource.headers` JSON column (`Authorization: Bearer <token>`).
+  - When credentials are absent or rejected, the adapter catches the Hasura error and converts it into a structured domain error (`SOURCE_AUTH_REQUIRED`).
+  - Offline testing is maintained via complete fixture data in `backend/tests/fixtures/afriwork-jobs.json`.
+
+---
+
+## 4. Normalization & Deduplication Strategy
+
+### Fingerprint Precedence
+1. **External ID:** If the provider provides an explicit vacancy ID:
+   `fingerprint = ext:<externalId>`
+2. **Canonical URL:** If external ID is absent, normalize the URL (strip tracking parameters, lowercase domain, remove trailing slashes) and hash:
+   `fingerprint = url:<sha256(normalizedUrl)>`
+3. **Content Signature:** If neither ID nor URL is available, hash key textual attributes:
+   `fingerprint = content:<sha256(title|company|description)>`
+
+### Database Upsert Behavior
+`JobsRepository.upsertJob` executes an atomic upsert on `(sourceId, fingerprint)`:
+- **New vacancy:** Created with `isNew: true`, initial status `PUBLISHED`, and classification status `PENDING`.
+- **Existing vacancy:** Updates title, description, and `lastSeenAt` without generating duplicate database rows (`isNew: false`).
+
+### Expiration Policy
+- If `closingDate` is provided and has elapsed, status transitions to `EXPIRED`.
+- If `closingDate` is missing or in the future, a fallback expiration is applied at `firstSeenAt + 30 days`.
+
+---
+
+## 5. Asynchronous AI Classification Service
+
+### Confidence Thresholds
+- **High Confidence ($\ge 0.85$):**
+  - Review Status: `AUTO_ACCEPTED`
+  - Job Classification Status: `CLASSIFIED`
+- **Medium Confidence ($0.60 \le \text{confidence} < 0.85$):**
+  - Review Status: `NEEDS_REVIEW`
+  - Job Classification Status: `NEEDS_REVIEW`
+- **Low Confidence ($< 0.60$):**
+  - Review Status: `REJECTED`
+  - Job Classification Status: `NEEDS_REVIEW`
+
+### Experience Level Strict Detection
+The model and heuristic fallback strictly require explicit textual evidence for experience levels:
+- `ENTRY`: Explicitly states entry level, fresh graduate, or internship.
+- `JUNIOR`: Explicitly states junior or 1-2 years experience.
+- `MID`: Explicitly states mid-level or 3-5 years experience.
+- `SENIOR`: Explicitly states senior or 5+ years experience.
+- `LEAD`: Explicitly states lead, principal, or manager.
+- `EXECUTIVE`: Explicitly states director, VP, head of, or C-level.
+- `UNSPECIFIED`: Default when experience is absent or ambiguous. Never assumes junior or entry.
+
+### Heuristic Fallback
+If `GEMINI_API_KEY` is omitted or in offline/isolated test environments, the system falls back to `classifyHeuristic()`, ensuring deterministic, testable classification across all 20 taxonomy categories without network dependencies.
+
+---
+
+## 6. Dynamic Source Scheduler
+
+- **Polling Heartbeat:** Runs every 30 seconds by default.
+- **Concurrency Cap:** Limits simultaneous runs across all sources to a maximum of 3 concurrent executions.
+- **Per-Source Overlap Guard:** Prevents a source from triggering if another run is already in `RUNNING` status for that source (`SOURCE_RUN_IN_PROGRESS`).
+- **Live Reconfiguration:** Whenever an admin creates or modifies a source (`POST /admin/sources` or `PATCH /admin/sources/:id`), `scheduler.refreshSchedule()` is invoked to recalculate due dates immediately without requiring server restarts.
+
+---
+
+## 7. Admin API Endpoints
+
+All admin endpoints reside under `/api/v1/admin/sources` and require:
+- `Authorization: Bearer <jwt_access_token>`
+- User `role: ADMIN`
+
+| Method | Endpoint | Description |
+|---|---|---|
+| `GET` | `/api/v1/admin/sources` | List all job sources with pagination (`page`, `limit`, `isActive`) |
+| `GET` | `/api/v1/admin/sources/:id` | Get single source configuration (sensitive headers stripped) |
+| `POST` | `/api/v1/admin/sources` | Create a new job source with SSRF validation |
+| `PATCH` | `/api/v1/admin/sources/:id` | Update polling interval, URL, active state, or headers |
+| `POST` | `/api/v1/admin/sources/:id/run` | Trigger an immediate manual collection run |
+| `GET` | `/api/v1/admin/sources/:id/runs` | List execution history and metrics for a source |
+| `GET` | `/api/v1/admin/sources/:id/stats` | Aggregate metrics (totalJobs, activeJobs, runs, success rate) |
+| `GET` | `/api/v1/admin/sources/runs` | Global audit log of the most recent collection runs |
+
+### SSRF Protection
+The URL validation schema (`createSourceSchema` / `updateSourceSchema`) rejects:
+- Loopback addresses (`127.0.0.1`, `localhost`)
+- Private networks (`10.0.0.0/8`, `172.16.0.0/12`, `192.168.0.0/16`)
+- Cloud instance metadata services (`169.254.169.254`, `metadata.google.internal`)
+- Non-HTTP/HTTPS protocols (`file://`, `ftp://`, `gopher://`)
+
+---
+
+## 8. Operational & Seeding Commands
+
+### Seeding
+```bash
+# Seed 20 job categories, initial Afriwork source, and default Admin account
+npm run seed
+```
+- Admin credentials: `admin@job.com` / `admin` (Argon2id hash, verified email, blocked in production).
+
+### Database Migrations
+```bash
+# Sync Prisma schema to MySQL
+npx prisma db push
+```
+
+### Running Test Suite
+```bash
+# Execute entire test suite (67 unit and integration tests)
+npm test
+
+# Run individual integration test
+npx tsx --test tests/integration/admin-sources-api.test.ts
+npx tsx --test tests/integration/jobs-pipeline.test.ts
+```

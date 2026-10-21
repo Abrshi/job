@@ -1,0 +1,69 @@
+{
+  "data": {
+    "jobs": [
+      {
+        "id": "afriwork-job-001",
+        "title": "Senior Full Stack TypeScript Developer",
+        "description": "We are seeking an experienced Full Stack Developer skilled in Node.js, Express, React, and MySQL. Minimum 5 years experience required. Competitive salary and benefits.",
+        "created_at": "2026-10-20T10:00:00.000Z",
+        "deadline": "2026-11-20T23:59:59.000Z",
+        "employment_type": "Full Time",
+        "experience_level": "Senior",
+        "is_remote": true,
+        "city": "Addis Ababa",
+        "country": "Ethiopia",
+        "min_salary": 45000,
+        "max_salary": 65000,
+        "salary_currency": "ETB",
+        "salary_period": "Monthly",
+        "company": {
+          "name": "Addis Tech Innovations",
+          "website": "https://addistech.example.com"
+        },
+        "application_url": "https://addistech.example.com/apply/001"
+      },
+      {
+        "id": "afriwork-job-002",
+        "title": "Accountant & Financial Analyst",
+        "description": "Responsible for managing financial audits, reconciliations, QuickBooks records, and annual reporting. 2+ years experience in corporate accounting.",
+        "created_at": "2026-10-19T08:30:00.000Z",
+        "deadline": null,
+        "employment_type": "Contract",
+        "experience_level": "Mid",
+        "is_remote": false,
+        "city": "Hawassa",
+        "country": "Ethiopia",
+        "min_salary": 20000,
+        "max_salary": 30000,
+        "salary_currency": "ETB",
+        "salary_period": "Monthly",
+        "company": {
+          "name": "Rift Valley Logistics",
+          "website": null
+        },
+        "application_url": null
+      },
+      {
+        "id": "afriwork-job-003",
+        "title": "Junior Graphic Designer & Video Editor",
+        "description": "Looking for a creative talent proficient in Adobe Illustrator, Photoshop, and Premiere Pro. Fresh graduates with strong portfolio welcome.",
+        "created_at": "2026-10-18T14:15:00.000Z",
+        "deadline": "2026-11-05T18:00:00.000Z",
+        "employment_type": "Part Time",
+        "experience_level": "Entry",
+        "is_remote": true,
+        "city": "Addis Ababa",
+        "country": "Ethiopia",
+        "min_salary": null,
+        "max_salary": null,
+        "salary_currency": null,
+        "salary_period": null,
+        "company": {
+          "name": "Creative Studios Ethiopia",
+          "website": "https://creativestudios.example.com"
+        },
+        "application_url": "https://creativestudios.example.com/careers"
+      }
+    ]
+  }
+}
