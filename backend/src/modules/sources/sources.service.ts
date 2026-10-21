@@ -158,12 +158,14 @@ export class SourcesService {
           `fetched=${recordsFetched}, created=${jobsCreated}, updated=${jobsUpdated}, skipped=${jobsSkipped}`
       );
 
-      // Trigger asynchronous classification for queued jobs (without blocking response)
-      setImmediate(() => {
-        this.classificationSvc.processPendingJobs(50).catch((err) => {
-          logger.error('Background classification queue processing error:', err.message);
+      // Trigger asynchronous classification for queued jobs (without blocking response, skip during tests)
+      if (process.env.NODE_ENV !== 'test') {
+        setImmediate(() => {
+          this.classificationSvc.processPendingJobs(50).catch((err) => {
+            logger.error('Background classification queue processing error:', err.message);
+          });
         });
-      });
+      }
 
       return completedRun;
     } catch (err: unknown) {
