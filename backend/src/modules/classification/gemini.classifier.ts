@@ -8,7 +8,7 @@ import {
 import { AppError } from '../../middleware/error-handler';
 
 export const CLASSIFICATION_PROMPT_VERSION = 'v1.0.0';
-export const DEFAULT_MODEL_IDENTIFIER = 'gemini-1.5-flash';
+export const DEFAULT_MODEL_IDENTIFIER = env.GEMINI_MODEL || 'gemini-3.5-flash-lite';
 
 const CATEGORY_LIST_FOR_PROMPT = INITIAL_CATEGORIES.map(
   (c) => `- ${c.slug}: "${c.name}" (${c.description})`
