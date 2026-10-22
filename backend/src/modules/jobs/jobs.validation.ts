@@ -48,3 +48,4 @@ export const PaginationQuerySchema = z.object({
 
 export type JobQueryInput = z.infer<typeof JobQuerySchema>['query'];
 export type ApplyJobInput = z.infer<typeof ApplyJobSchema>['body'];
+

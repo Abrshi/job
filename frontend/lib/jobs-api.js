@@ -89,3 +89,4 @@ export async function updateProfile(data) {
   const res = await apiClient.patch('/profile', data);
   return res.data.profile;
 }
+

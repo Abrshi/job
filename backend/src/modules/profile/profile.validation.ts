@@ -22,3 +22,4 @@ export const UpdateProfileSchema = z.object({
 });
 
 export type UpdateProfileInput = z.infer<typeof UpdateProfileSchema>['body'];
+

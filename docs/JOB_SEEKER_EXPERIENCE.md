@@ -157,3 +157,4 @@ All endpoints are mounted under `/api/v1/jobs` and `/api/v1/profile`:
 - **Build Verification:**
   - `npm run typecheck` passes with 0 TypeScript errors.
   - Next.js production build (`npm run build`) successfully compiles all 22 static and dynamic routes using Turbopack.
+

@@ -43,3 +43,4 @@ router.delete('/:id/save', authenticate, validate(JobIdParamSchema), unsaveJob);
 router.post('/:id/apply', authenticate, validate(ApplyJobSchema), applyForJob);
 
 export default router;
+

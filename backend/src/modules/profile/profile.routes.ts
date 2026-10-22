@@ -12,3 +12,4 @@ router.get('/', getProfile);
 router.patch('/', validate(UpdateProfileSchema), updateProfile);
 
 export default router;
+

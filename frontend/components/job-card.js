@@ -204,3 +204,4 @@ export function JobCard({
     </div>
   );
 }
+
