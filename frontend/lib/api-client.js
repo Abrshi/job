@@ -134,8 +134,10 @@ class ApiClient {
   async request(endpoint, options = {}, isRetry = false) {
     const url = endpoint.startsWith('http') ? endpoint : `${API_BASE_URL}${endpoint}`;
 
+    const isFormData = typeof FormData !== 'undefined' && options.body instanceof FormData;
+
     const headers = {
-      'Content-Type': 'application/json',
+      ...(!isFormData ? { 'Content-Type': 'application/json' } : {}),
       ...options.headers,
     };
 
@@ -268,26 +270,29 @@ class ApiClient {
   }
 
   post(endpoint, body, options = {}) {
+    const isFormData = typeof FormData !== 'undefined' && body instanceof FormData;
     return this.request(endpoint, {
       ...options,
       method: 'POST',
-      body: body !== undefined ? JSON.stringify(body) : undefined,
+      body: isFormData ? body : (body !== undefined ? JSON.stringify(body) : undefined),
     });
   }
 
   put(endpoint, body, options = {}) {
+    const isFormData = typeof FormData !== 'undefined' && body instanceof FormData;
     return this.request(endpoint, {
       ...options,
       method: 'PUT',
-      body: body !== undefined ? JSON.stringify(body) : undefined,
+      body: isFormData ? body : (body !== undefined ? JSON.stringify(body) : undefined),
     });
   }
 
   patch(endpoint, body, options = {}) {
+    const isFormData = typeof FormData !== 'undefined' && body instanceof FormData;
     return this.request(endpoint, {
       ...options,
       method: 'PATCH',
-      body: body !== undefined ? JSON.stringify(body) : undefined,
+      body: isFormData ? body : (body !== undefined ? JSON.stringify(body) : undefined),
     });
   }
 

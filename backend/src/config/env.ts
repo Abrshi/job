@@ -15,6 +15,11 @@ const envSchema = z.object({
   REFRESH_TOKEN_EXPIRES_IN: z.string().default('7d'),
   GEMINI_API_KEY: z.string().optional(),
   GEMINI_MODEL: z.string().default('gemini-3.5-flash-lite'),
+  GOOGLE_SERVICE_ACCOUNT_EMAIL: z.string().optional(),
+  GOOGLE_PRIVATE_KEY: z.string().optional(),
+  GOOGLE_PROJECT_ID: z.string().optional(),
+  GOOGLE_DRIVE_FOLDER_ID: z.string().optional(),
+  MAX_UPLOAD_SIZE_MB: z.coerce.number().default(10),
 });
 
 export type Env = z.infer<typeof envSchema>;
