@@ -1,6 +1,8 @@
 import { prisma } from '../../lib/prisma';
 import { AppError } from '../../middleware/error-handler';
 import { profileCompletionService } from './profile-completion.service';
+import { uploadFile, downloadFile, deleteFile } from '../../lib/storage/uploader';
+import { logger } from '../../lib/logger';
 import { Prisma } from '@prisma/client';
 
 export class ProfileService {
@@ -803,6 +805,179 @@ export class ProfileService {
     await prisma.profileAchievement.delete({ where: { id: achievementId } });
     await this.getProfile(userId);
     return { success: true };
+  }
+
+  // --- Profile Picture (Avatar) Management ---
+
+  /**
+   * Validate and upload user profile picture, updating UserProfile with proxy URL
+   */
+  async uploadAvatar(
+    userId: string,
+    file: { buffer: Buffer; originalname: string; mimetype: string; size: number }
+  ) {
+    if (!file || !file.buffer) {
+      throw AppError.badRequest('No image file provided', 'IMAGE_REQUIRED');
+    }
+
+    // Maximum file size: 5MB
+    const MAX_SIZE = 5 * 1024 * 1024;
+    if (file.buffer.length > MAX_SIZE) {
+      throw AppError.badRequest('Profile picture size exceeds maximum limit of 5MB', 'IMAGE_TOO_LARGE');
+    }
+
+    // Validate MIME and magic signature bytes
+    const ext = this.validateImageSignature(file.buffer, file.mimetype);
+
+    // Fetch existing profile to check for previous avatar
+    const existing = await prisma.userProfile.findUnique({
+      where: { userId },
+      select: { id: true, avatarFileId: true },
+    });
+
+    const filename = `avatar_${userId}_${Date.now()}.${ext}`;
+
+    // Upload using unified uploader (Google Drive with local storage fallback)
+    const uploadResult = await uploadFile({
+      buffer: file.buffer,
+      filename,
+      mimeType: file.mimetype,
+    });
+
+    const avatarUrl = `/api/v1/profile/avatar/${userId}`;
+
+    await prisma.userProfile.upsert({
+      where: { userId },
+      create: {
+        userId,
+        avatarFileId: uploadResult.fileId,
+        avatarUrl,
+      },
+      update: {
+        avatarFileId: uploadResult.fileId,
+        avatarUrl,
+      },
+      select: {
+        id: true,
+        avatarUrl: true,
+        avatarFileId: true,
+      },
+    });
+
+    // Cleanup previous avatar file if exists
+    if (existing?.avatarFileId && existing.avatarFileId !== uploadResult.fileId) {
+      deleteFile(existing.avatarFileId).catch((err) => {
+        logger.warn('Failed deleting previous avatar from storage', {
+          oldFileId: existing.avatarFileId,
+          error: (err as Error).message,
+        });
+      });
+    }
+
+    return {
+      avatarUrl,
+      fileId: uploadResult.fileId,
+      storageProvider: uploadResult.storageProvider,
+    };
+  }
+
+  /**
+   * Retrieve avatar image stream for the backend proxy
+   */
+  async getAvatarStream(
+    userId: string
+  ): Promise<{ buffer: Buffer; mimeType: string; filename?: string } | null> {
+    const profile = await prisma.userProfile.findUnique({
+      where: { userId },
+      select: { avatarFileId: true },
+    });
+
+    if (!profile || !profile.avatarFileId) {
+      return null;
+    }
+
+    try {
+      return await downloadFile(profile.avatarFileId);
+    } catch (err) {
+      logger.error('Failed to retrieve avatar file', {
+        userId,
+        avatarFileId: profile.avatarFileId,
+        error: (err as Error).message,
+      });
+      return null;
+    }
+  }
+
+  /**
+   * Delete user avatar and clear profile fields
+   */
+  async deleteAvatar(userId: string): Promise<boolean> {
+    const profile = await prisma.userProfile.findUnique({
+      where: { userId },
+      select: { avatarFileId: true },
+    });
+
+    if (!profile || !profile.avatarFileId) {
+      return true;
+    }
+
+    const oldFileId = profile.avatarFileId;
+    await prisma.userProfile.update({
+      where: { userId },
+      data: {
+        avatarFileId: null,
+        avatarUrl: null,
+      },
+    });
+
+    deleteFile(oldFileId).catch((err) => {
+      logger.warn('Failed to delete avatar from storage', {
+        oldFileId,
+        error: (err as Error).message,
+      });
+    });
+
+    return true;
+  }
+
+  /**
+   * Validate image signature / magic bytes
+   */
+  private validateImageSignature(buffer: Buffer, mimetype: string): string {
+    const allowedMimes = ['image/jpeg', 'image/png', 'image/webp', 'image/gif'];
+    const normalizedMime = (mimetype || '').toLowerCase().trim();
+
+    if (!allowedMimes.includes(normalizedMime)) {
+      throw AppError.badRequest(
+        'Invalid image format. Allowed formats: JPEG, PNG, WEBP, GIF',
+        'INVALID_IMAGE_TYPE'
+      );
+    }
+
+    if (buffer.length < 4) {
+      throw AppError.badRequest('File is too small to be a valid image', 'INVALID_IMAGE_FILE');
+    }
+
+    const isJpeg = buffer[0] === 0xff && buffer[1] === 0xd8 && buffer[2] === 0xff;
+    const isPng =
+      buffer[0] === 0x89 && buffer[1] === 0x50 && buffer[2] === 0x4e && buffer[3] === 0x47;
+    const isGif = buffer[0] === 0x47 && buffer[1] === 0x49 && buffer[2] === 0x46 && buffer[3] === 0x38;
+    const isWebp =
+      buffer.length >= 12 &&
+      buffer.toString('ascii', 0, 4) === 'RIFF' &&
+      buffer.toString('ascii', 8, 12) === 'WEBP';
+
+    if (!isJpeg && !isPng && !isGif && !isWebp) {
+      throw AppError.badRequest(
+        'File content does not match a supported image type (JPEG, PNG, WEBP, GIF)',
+        'INVALID_IMAGE_SIGNATURE'
+      );
+    }
+
+    if (isJpeg) return 'jpg';
+    if (isPng) return 'png';
+    if (isGif) return 'gif';
+    return 'webp';
   }
 }
 

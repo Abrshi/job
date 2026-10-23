@@ -322,6 +322,8 @@ model UserProfile {
   displayName              String?
   preferredName            String?
   headline                 String?
+  avatarUrl                String?
+  avatarFileId             String?
   phoneNumber              String?
   professionalEmail        String?
   country                  String?

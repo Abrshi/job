@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/hooks/use-auth';
 import { Button } from '@/components/ui/button';
+import { getAvatarUrl } from '@/lib/jobs-api';
 
 export function Navbar() {
   const { user, isAuthenticated, loading, logout } = useAuth();
@@ -94,8 +95,19 @@ export function Navbar() {
                   href={user?.role === 'ADMIN' ? '/admin' : '/profile'}
                   className="flex items-center gap-2.5 p-1.5 rounded-lg hover:bg-stormy-canvas transition-colors text-left"
                 >
-                  <div className="w-8 h-8 rounded-full bg-stormy-mist/50 border border-stormy-mist flex items-center justify-center text-xs font-semibold text-stormy-dark">
-                    {displayName.charAt(0).toUpperCase()}
+                  <div className="w-8 h-8 rounded-full bg-stormy-mist/50 border border-stormy-mist flex items-center justify-center text-xs font-semibold text-stormy-dark overflow-hidden shrink-0">
+                    {user?.avatarUrl ? (
+                      <img
+                        src={getAvatarUrl(user.avatarUrl)}
+                        alt={displayName}
+                        className="w-full h-full object-cover"
+                        onError={(e) => {
+                          e.currentTarget.style.display = 'none';
+                        }}
+                      />
+                    ) : (
+                      displayName.charAt(0).toUpperCase()
+                    )}
                   </div>
                   <div className="flex flex-col">
                     <span className="text-xs font-semibold text-stormy-main leading-tight line-clamp-1 max-w-[140px]">
@@ -178,9 +190,23 @@ export function Navbar() {
               <Link
                 href="/profile"
                 onClick={() => setIsMobileMenuOpen(false)}
-                className="block py-2 text-sm font-medium text-stormy-muted hover:text-stormy-dark"
+                className="flex items-center gap-2.5 py-2 text-sm font-medium text-stormy-muted hover:text-stormy-dark"
               >
-                My Profile ({displayName})
+                <div className="w-6 h-6 rounded-full bg-stormy-mist/50 border border-stormy-mist flex items-center justify-center text-[10px] font-semibold text-stormy-dark overflow-hidden shrink-0">
+                  {user?.avatarUrl ? (
+                    <img
+                      src={getAvatarUrl(user.avatarUrl)}
+                      alt={displayName}
+                      className="w-full h-full object-cover"
+                      onError={(e) => {
+                        e.currentTarget.style.display = 'none';
+                      }}
+                    />
+                  ) : (
+                    displayName.charAt(0).toUpperCase()
+                  )}
+                </div>
+                <span>My Profile ({displayName})</span>
               </Link>
               {user?.role === 'ADMIN' && (
                 <Link

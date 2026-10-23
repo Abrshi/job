@@ -198,3 +198,86 @@ export const deleteAchievement = async (req: Request, res: Response, next: NextF
     next(err);
   }
 };
+
+// --- Avatar Controllers ---
+
+export const uploadAvatar = async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const file =
+      req.file ||
+      (req.files && Array.isArray(req.files) ? req.files[0] : null) ||
+      (req.files && typeof req.files === 'object'
+        ? (Object.values(req.files).flat()[0] as Express.Multer.File)
+        : null);
+
+    if (!file) {
+      return res.status(400).json({
+        status: 'error',
+        message: 'No image file uploaded. Send file under field "avatar" or "file".',
+      });
+    }
+
+    const result = await profileService.uploadAvatar(req.user!.userId, file);
+    res.status(200).json({
+      status: 'success',
+      message: 'Profile picture updated successfully',
+      data: result,
+    });
+  } catch (err) {
+    next(err);
+  }
+};
+
+export const getAvatarProxy = async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const userId = Array.isArray(req.params.userId) ? req.params.userId[0] : req.params.userId;
+    if (!userId) {
+      return res.status(400).json({ status: 'error', message: 'User ID is required' });
+    }
+
+    const avatar = await profileService.getAvatarStream(userId);
+    if (!avatar) {
+      return res.status(404).json({ status: 'error', message: 'Avatar not found' });
+    }
+
+    res.setHeader('Content-Type', avatar.mimeType || 'image/jpeg');
+    res.setHeader('Content-Length', avatar.buffer.length);
+    res.setHeader('Cache-Control', 'public, max-age=86400, stale-while-revalidate=604800');
+    res.setHeader('Content-Disposition', 'inline');
+    res.setHeader('Cross-Origin-Resource-Policy', 'cross-origin');
+    res.send(avatar.buffer);
+  } catch (err) {
+    next(err);
+  }
+};
+
+export const getMyAvatarProxy = async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const userId = req.user!.userId;
+    const avatar = await profileService.getAvatarStream(userId);
+    if (!avatar) {
+      return res.status(404).json({ status: 'error', message: 'Avatar not found' });
+    }
+
+    res.setHeader('Content-Type', avatar.mimeType || 'image/jpeg');
+    res.setHeader('Content-Length', avatar.buffer.length);
+    res.setHeader('Cache-Control', 'public, max-age=86400, stale-while-revalidate=604800');
+    res.setHeader('Content-Disposition', 'inline');
+    res.setHeader('Cross-Origin-Resource-Policy', 'cross-origin');
+    res.send(avatar.buffer);
+  } catch (err) {
+    next(err);
+  }
+};
+
+export const deleteAvatar = async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    await profileService.deleteAvatar(req.user!.userId);
+    res.status(200).json({
+      status: 'success',
+      message: 'Profile picture removed successfully',
+    });
+  } catch (err) {
+    next(err);
+  }
+};

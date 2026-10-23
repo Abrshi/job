@@ -1,4 +1,4 @@
-import { apiClient } from './api-client';
+import { apiClient } from './api-client.js';
 
 /**
  * Fetch publicly available jobs with search, filtering, and pagination
@@ -183,5 +183,30 @@ export async function addAchievement(data) {
 export async function deleteAchievement(id) {
   const res = await apiClient.delete(`/profile/achievements/${id}`);
   return res.data;
+}
+
+// Avatar / Profile Picture Management
+export async function uploadAvatar(file) {
+  const formData = new FormData();
+  formData.append('avatar', file);
+  const res = await apiClient.post('/profile/avatar', formData);
+  return res.data;
+}
+
+export async function deleteAvatar() {
+  const res = await apiClient.delete('/profile/avatar');
+  return res.data;
+}
+
+export function getAvatarUrl(avatarPath) {
+  if (!avatarPath) return null;
+  if (avatarPath.startsWith('http://') || avatarPath.startsWith('https://')) {
+    return avatarPath;
+  }
+  const apiBase = (process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api/v1').replace(
+    /\/api\/v1\/?$/,
+    ''
+  );
+  return `${apiBase}${avatarPath.startsWith('/') ? '' : '/'}${avatarPath}`;
 }
 

@@ -63,6 +63,7 @@ export class AuthService {
         lastName: user.lastName,
         role: user.role,
         isEmailVerified: user.isEmailVerified,
+        avatarUrl: (user as any).profile?.avatarUrl || null,
         createdAt: user.createdAt,
       },
       tokens,
@@ -98,6 +99,7 @@ export class AuthService {
         lastName: user.lastName,
         role: user.role,
         isEmailVerified: user.isEmailVerified,
+        avatarUrl: (user as any).profile?.avatarUrl || null,
         createdAt: user.createdAt,
       },
       tokens,
@@ -157,6 +159,7 @@ export class AuthService {
       lastName: user.lastName,
       role: user.role,
       isEmailVerified: user.isEmailVerified,
+      avatarUrl: (user as any).profile?.avatarUrl || null,
       createdAt: user.createdAt,
     };
   }

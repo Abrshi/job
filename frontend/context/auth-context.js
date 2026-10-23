@@ -133,6 +133,10 @@ export function AuthProvider({ children }) {
     }
   };
 
+  const updateUserAvatar = (avatarUrl) => {
+    setUser((prev) => (prev ? { ...prev, avatarUrl } : prev));
+  };
+
   const value = {
     user,
     loading,
@@ -144,6 +148,7 @@ export function AuthProvider({ children }) {
     logout,
     restoreSession,
     refreshUser,
+    updateUserAvatar,
   };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

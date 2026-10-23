@@ -1,4 +1,5 @@
 import { Router } from 'express';
+import multer from 'multer';
 import {
   getProfile,
   updateProfile,
@@ -19,6 +20,10 @@ import {
   deleteLanguage,
   addAchievement,
   deleteAchievement,
+  uploadAvatar,
+  getAvatarProxy,
+  getMyAvatarProxy,
+  deleteAvatar,
 } from './profile.controller';
 import { validate } from '../../middleware/validate';
 import { authenticate } from '../../middleware/authenticate';
@@ -36,8 +41,22 @@ import {
 
 const router = Router();
 
-// All profile endpoints require authenticated user
+// Multer memory storage for avatar uploads (max 5MB)
+const avatarUpload = multer({
+  storage: multer.memoryStorage(),
+  limits: { fileSize: 5 * 1024 * 1024 },
+});
+
+// PUBLIC Avatar Image Proxy Endpoint (allows HTML <img> tags to load image without auth headers)
+router.get('/avatar/:userId', getAvatarProxy);
+
+// All subsequent profile endpoints require authenticated user
 router.use(authenticate);
+
+// Profile Avatar management
+router.get('/avatar', getMyAvatarProxy);
+router.post('/avatar', avatarUpload.any(), uploadAvatar);
+router.delete('/avatar', deleteAvatar);
 
 // Profile root
 router.get('/', getProfile);
