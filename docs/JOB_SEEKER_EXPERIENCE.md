@@ -17,6 +17,11 @@ The Job Seeker Experience provides candidates and public visitors with an intuit
 
 ### Database Schema Additions (`schema.mysql.prisma` & `schema.postgresql.prisma`)
 
+> [!NOTE]
+> **Application Tracking Evolution:**
+> The minimal initial application schema below has been superseded by the finalized full-lifecycle Application Tracking System.
+> For the comprehensive specification—covering the 7-stage status state machine (`DRAFT`, `APPLIED`, `IN_REVIEW`, `INTERVIEW`, `OFFER`, `REJECTED`, `WITHDRAWN`), external job tracking, document snapshot immutability, and multi-round interview tracking—refer directly to [`docs/APPLICATION_TRACKING.md`](./APPLICATION_TRACKING.md).
+
 ```prisma
 enum ApplicationMethod {
   EXTERNAL

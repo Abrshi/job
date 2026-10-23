@@ -24,3 +24,4 @@ describe('Avatar URL Resolution Logic', () => {
     assert.ok(resolved.startsWith('http'));
   });
 });
+
