@@ -10,15 +10,37 @@ The CV-First Onboarding and Profile system enables job seekers to create and man
 
 ### Configuration & Service Account
 Document storage integrates with the Google Drive API v3 using a Google Cloud Service Account.
-The backend loads configuration from environment variables:
+The backend flexibly loads configuration from environment variables (supporting both `GOOGLE_*` prefixes and direct Service Account JSON keys):
 
-| Environment Variable | Description | Example / Format |
-|---|---|---|
-| `GOOGLE_SERVICE_ACCOUNT_EMAIL` | Service Account client email | `app-storage@my-project.iam.gserviceaccount.com` |
-| `GOOGLE_PRIVATE_KEY` | RSA Private Key (PEM format with escaped `\n`) | `"-----BEGIN PRIVATE KEY-----\nMIIE...==\n-----END PRIVATE KEY-----\n"` |
-| `GOOGLE_PROJECT_ID` | Google Cloud Project ID | `my-project-12345` |
-| `GOOGLE_DRIVE_FOLDER_ID` | Target private Google Drive folder ID | `1aB2c3D4e5F6g7H8i9J0kL` |
-| `MAX_UPLOAD_SIZE_MB` | Maximum allowed file upload size in MB | `10` (default) |
+| Environment Variable | Alias / JSON Key | Description | Example / Format |
+|---|---|---|---|
+| `GOOGLE_SERVICE_ACCOUNT_EMAIL` | `CLIENT_EMAIL` | Service Account client email | `app-storage@my-project.iam.gserviceaccount.com` |
+| `GOOGLE_PRIVATE_KEY` | `PRIVATE_KEY` | RSA Private Key (PEM format with `\n`) | `"-----BEGIN PRIVATE KEY-----\nMIIE...==\n-----END PRIVATE KEY-----\n"` |
+| `GOOGLE_PROJECT_ID` | `PROJECT_ID` | Google Cloud Project ID | `my-project-12345` |
+| `GOOGLE_DRIVE_FOLDER_ID` | `FOLDER_ID` | Target Google Drive folder ID | `1aB2c3D4e5F6g7H8i9J0kL` |
+| `MAX_UPLOAD_SIZE_MB` | - | Maximum allowed file upload size in MB | `10` (default) |
+
+> [!IMPORTANT]
+> **Google Service Account Quota Notice:** Google Service Accounts do not have personal storage quota in Google Drive. To upload files to Google Drive, create a folder in your personal or workspace Google Drive, share that folder with `CLIENT_EMAIL` as **Editor**, and paste the folder ID into `GOOGLE_DRIVE_FOLDER_ID`.
+> If `GOOGLE_DRIVE_FOLDER_ID` is not configured or Google Drive returns quota exceeded, the system automatically falls back to secure persistent local storage (`uploads/documents`) so uploads and onboarding never fail!
+
+### Single Function File Upload Helper
+Any service or route in the application can import and execute file uploads with a single call:
+
+```ts
+import { uploadFile } from '@/lib/storage/uploader';
+// or
+import { uploadFile } from '@/modules/documents/google-drive.service';
+
+const result = await uploadFile({
+  buffer: file.buffer,
+  filename: file.originalname,
+  mimeType: file.mimetype,
+  folderId: 'optional-folder-id', // Optional
+});
+
+console.log(result.fileId, result.storageProvider, result.webViewLink);
+```
 
 ### Security & Privacy Safeguards
 - **Private Folder Isolation:** Original CVs and resumes are uploaded into a designated private folder owned by the service account. Files are **never made public** or shared with unauthorized parties.
@@ -157,3 +179,4 @@ All endpoints require JWT Bearer authentication:
 - **Build Checks:**
   - `npm run typecheck` passed with 0 errors.
   - `npm run build` compiled all 22 Next.js routes successfully.
+

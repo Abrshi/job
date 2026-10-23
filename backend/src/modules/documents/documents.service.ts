@@ -42,7 +42,7 @@ export class DocumentsService {
         mimeType: file.mimetype,
         fileSize: file.size || file.buffer.length,
         fileChecksum: checksum,
-        storageProvider: googleDriveService.isLiveStorage ? 'GOOGLE_DRIVE' : 'LOCAL_MOCK',
+        storageProvider: driveUpload.storageProvider || (googleDriveService.isLiveStorage ? 'GOOGLE_DRIVE' : 'LOCAL_STORAGE'),
         processingStatus: 'COMPLETED',
         extractionStatus: 'EXTRACTING',
       },
