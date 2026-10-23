@@ -687,3 +687,4 @@ flowchart TD
 - **Documents & Storage (`src/modules/documents/` & `src/lib/storage/`):** Supplies document snapshot validation, file ID links, and proxied downloads.
 - **Catalog Jobs (`src/modules/jobs/`):** Links verified platform jobs, provides company metadata and deadline validation.
 - **Design System (`docs/DESIGN_SYSTEM.md`):** Governs all styling, colors, status pills, and responsive layout primitives.
+

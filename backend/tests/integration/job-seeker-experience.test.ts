@@ -445,7 +445,7 @@ describe('Job Seeker Experience Integration', () => {
 
       assert.strictEqual(res.status, 201);
       assert.strictEqual(json.status, 'success');
-      assert.strictEqual(json.data.status, 'SUBMITTED');
+      assert.strictEqual(json.data.status, 'APPLIED');
       assert.strictEqual(json.data.jobTitle, 'Junior Data Analyst');
 
       // Verify in candidate applications list
@@ -458,7 +458,7 @@ describe('Job Seeker Experience Integration', () => {
       assert.ok(appListJson.data.applications.length >= 1);
       const app = appListJson.data.applications.find((a: any) => a.job.id === internalJobId);
       assert.ok(app);
-      assert.strictEqual(app.status, 'SUBMITTED');
+      assert.strictEqual(app.status, 'APPLIED');
     });
 
     it('prevents duplicate applications for the same job and user with 409', async () => {

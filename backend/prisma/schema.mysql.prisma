@@ -86,11 +86,33 @@ enum ApplicationMethod {
 }
 
 enum ApplicationStatus {
-  SUBMITTED
-  REVIEWING
-  SHORTLISTED
+  DRAFT
+  APPLIED
+  IN_REVIEW
+  INTERVIEW
+  OFFER
   REJECTED
-  ACCEPTED
+  WITHDRAWN
+}
+
+enum ApplicationSource {
+  PLATFORM
+  EXTERNAL
+}
+
+enum InterviewType {
+  PHONE
+  VIDEO
+  IN_PERSON
+  TAKE_HOME
+  OTHER
+}
+
+enum InterviewOutcome {
+  PENDING
+  PASSED
+  FAILED
+  CANCELLED
 }
 
 enum DocumentType {
@@ -374,41 +396,122 @@ model SavedJob {
 }
 
 model JobApplication {
-  id        String            @id @default(uuid())
-  jobId     String
-  job       Job               @relation(fields: [jobId], references: [id], onDelete: Cascade)
-  userId    String
-  user      User              @relation(fields: [userId], references: [id], onDelete: Cascade)
-  status    ApplicationStatus @default(SUBMITTED)
-  coverNote String?           @db.Text
-  createdAt DateTime          @default(now())
-  updatedAt DateTime          @updatedAt
+  id                       String                    @id @default(uuid())
+  userId                   String                    @map("user_id")
+  user                     User                      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  jobId                    String?                   @map("job_id")
+  job                      Job?                      @relation(fields: [jobId], references: [id], onDelete: SetNull)
+  source                   ApplicationSource         @default(PLATFORM)
+  status                   ApplicationStatus         @default(APPLIED)
+  jobTitle                 String                    @map("job_title") @db.VarChar(255)
+  companyName              String                    @map("company_name") @db.VarChar(255)
+  jobUrl                   String?                   @map("job_url") @db.VarChar(1000)
+  location                 String?                   @db.VarChar(255)
+  salary                   String?                   @db.VarChar(100)
+  appliedAt                DateTime?                 @map("applied_at")
+  documentId               String?                   @map("document_id")
+  document                 UserDocument?             @relation("ApplicationCv", fields: [documentId], references: [id], onDelete: SetNull)
+  documentSnapshotFilename String?                   @map("document_snapshot_filename") @db.VarChar(255)
+  documentSnapshotChecksum String?                   @map("document_snapshot_checksum") @db.VarChar(64)
+  coverNote                String?                   @map("cover_note") @db.Text
+  coverLetterDocumentId    String?                   @map("cover_letter_document_id")
+  coverLetterDocument      UserDocument?             @relation("ApplicationCoverLetter", fields: [coverLetterDocumentId], references: [id], onDelete: SetNull)
+  notes                    String?                   @db.Text
+  isArchived               Boolean                   @default(false) @map("is_archived")
+  activeKey                String?                   @unique @map("active_key") @db.VarChar(255)
+  createdAt                DateTime                  @default(now()) @map("created_at")
+  updatedAt                DateTime                  @updatedAt @map("updated_at")
 
-  @@unique([userId, jobId])
+  history                  JobApplicationHistory[]
+  interviews               JobApplicationInterview[]
+  reminders                JobApplicationReminder[]
+
   @@index([userId])
   @@index([jobId])
   @@index([status])
+  @@index([source])
+  @@index([appliedAt])
+  @@index([isArchived])
   @@map("job_applications")
 }
 
+model JobApplicationHistory {
+  id              String             @id @default(uuid())
+  applicationId   String             @map("application_id")
+  application     JobApplication     @relation(fields: [applicationId], references: [id], onDelete: Cascade)
+  fromStatus      ApplicationStatus? @map("from_status")
+  toStatus        ApplicationStatus  @map("to_status")
+  reason          String?            @map("reason") @db.VarChar(500)
+  changedByUserId String             @map("changed_by_user_id")
+  createdAt       DateTime           @default(now()) @map("created_at")
+
+  @@index([applicationId])
+  @@index([createdAt])
+  @@map("job_application_histories")
+}
+
+model JobApplicationInterview {
+  id               String           @id @default(uuid())
+  applicationId    String           @map("application_id")
+  application      JobApplication   @relation(fields: [applicationId], references: [id], onDelete: Cascade)
+  roundNumber      Int              @default(1) @map("round_number")
+  title            String           @db.VarChar(255)
+  interviewType    InterviewType    @default(VIDEO) @map("interview_type")
+  scheduledAt      DateTime         @map("scheduled_at")
+  timezone         String           @default("UTC") @db.VarChar(100)
+  durationMinutes  Int?             @default(60) @map("duration_minutes")
+  locationUrl      String?          @map("location_url") @db.VarChar(1000)
+  interviewerInfo  String?          @map("interviewer_info") @db.VarChar(500)
+  preparationNotes String?          @map("preparation_notes") @db.Text
+  feedbackNotes    String?          @map("feedback_notes") @db.Text
+  outcome          InterviewOutcome @default(PENDING)
+  createdAt        DateTime         @default(now()) @map("created_at")
+  updatedAt        DateTime         @updatedAt @map("updated_at")
+
+  @@index([applicationId])
+  @@index([scheduledAt])
+  @@index([outcome])
+  @@map("job_application_interviews")
+}
+
+model JobApplicationReminder {
+  id            String         @id @default(uuid())
+  applicationId String         @map("application_id")
+  application   JobApplication @relation(fields: [applicationId], references: [id], onDelete: Cascade)
+  title         String         @db.VarChar(255)
+  remindAt      DateTime       @map("remind_at")
+  isCompleted   Boolean        @default(false) @map("is_completed")
+  completedAt   DateTime?      @map("completed_at")
+  notes         String?        @db.Text
+  createdAt     DateTime       @default(now()) @map("created_at")
+  updatedAt     DateTime       @updatedAt @map("updated_at")
+
+  @@index([applicationId])
+  @@index([remindAt])
+  @@index([isCompleted])
+  @@map("job_application_reminders")
+}
+
 model UserDocument {
-  id               String                   @id @default(uuid())
-  userId           String                   @map("user_id")
-  user             User                     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  driveFileId      String                   @map("drive_file_id")
-  documentType     DocumentType             @default(CV) @map("document_type")
-  originalFilename String                   @map("original_filename")
-  mimeType         String                   @map("mime_type")
-  fileSize         Int                      @map("file_size")
-  fileChecksum     String?                  @map("file_checksum")
-  storageProvider  String                   @default("GOOGLE_DRIVE") @map("storage_provider")
-  processingStatus DocumentProcessingStatus @default(PENDING) @map("processing_status")
-  extractionStatus DocumentExtractionStatus @default(NOT_EXTRACTED) @map("extraction_status")
-  extractedText    String?                  @db.LongText @map("extracted_text")
-  extractedData    Json?                    @map("extracted_data")
-  errorMessage     String?                  @db.Text @map("error_message")
-  createdAt        DateTime                 @default(now()) @map("created_at")
-  updatedAt        DateTime                 @updatedAt @map("updated_at")
+  id                        String                   @id @default(uuid())
+  userId                    String                   @map("user_id")
+  user                      User                     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  driveFileId               String                   @map("drive_file_id")
+  documentType              DocumentType             @default(CV) @map("document_type")
+  originalFilename          String                   @map("original_filename")
+  mimeType                  String                   @map("mime_type")
+  fileSize                  Int                      @map("file_size")
+  fileChecksum              String?                  @map("file_checksum")
+  storageProvider           String                   @default("GOOGLE_DRIVE") @map("storage_provider")
+  processingStatus          DocumentProcessingStatus @default(PENDING) @map("processing_status")
+  extractionStatus          DocumentExtractionStatus @default(NOT_EXTRACTED) @map("extraction_status")
+  extractedText             String?                  @db.LongText @map("extracted_text")
+  extractedData             Json?                    @map("extracted_data")
+  errorMessage              String?                  @db.Text @map("error_message")
+  createdAt                 DateTime                 @default(now()) @map("created_at")
+  updatedAt                 DateTime                 @updatedAt @map("updated_at")
+  applicationsAsCv          JobApplication[]         @relation("ApplicationCv")
+  applicationsAsCoverLetter JobApplication[]         @relation("ApplicationCoverLetter")
 
   @@index([userId])
   @@index([documentType])

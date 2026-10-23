@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import authRoutes from '../modules/auth/auth.routes';
 import jobsRoutes from '../modules/jobs/jobs.routes';
+import applicationsRoutes from '../modules/applications/applications.routes';
 import profileRoutes from '../modules/profile/profile.routes';
 import documentsRoutes from '../modules/documents/documents.routes';
 import adminSourcesRoutes from '../modules/sources/sources.routes';
@@ -29,6 +30,7 @@ router.get('/settings', async (req, res, next) => {
 
 router.use('/auth', authRoutes);
 router.use('/jobs', jobsRoutes);
+router.use('/applications', applicationsRoutes);
 router.use('/profile', profileRoutes);
 router.use('/documents', documentsRoutes);
 router.use('/admin/sources', adminSourcesRoutes);

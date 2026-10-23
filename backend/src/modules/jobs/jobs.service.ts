@@ -257,6 +257,8 @@ export class JobsService {
 
     let isSaved = false;
     let hasApplied = false;
+    let applicationStatus: string | null = null;
+    let applicationId: string | null = null;
 
     if (currentUserId) {
       const [saved, application] = await Promise.all([
@@ -268,18 +270,24 @@ export class JobsService {
             },
           },
         }),
-        prisma.jobApplication.findUnique({
+        prisma.jobApplication.findFirst({
           where: {
-            userId_jobId: {
-              userId: currentUserId,
-              jobId: job.id,
-            },
+            userId: currentUserId,
+            jobId: job.id,
+            isArchived: false,
+          },
+          orderBy: { createdAt: 'desc' },
+          select: {
+            id: true,
+            status: true,
           },
         }),
       ]);
 
       isSaved = Boolean(saved);
-      hasApplied = Boolean(application);
+      hasApplied = Boolean(application && application.status !== 'WITHDRAWN');
+      applicationStatus = application?.status || null;
+      applicationId = application?.id || null;
     }
 
     return {
@@ -289,6 +297,8 @@ export class JobsService {
       isExpired,
       isSaved,
       hasApplied,
+      applicationStatus,
+      applicationId,
     };
   }
 
@@ -492,12 +502,11 @@ export class JobsService {
     }
 
     // Prevent duplicate active applications
-    const existingApplication = await prisma.jobApplication.findUnique({
+    const existingApplication = await prisma.jobApplication.findFirst({
       where: {
-        userId_jobId: {
-          userId,
-          jobId,
-        },
+        userId,
+        jobId,
+        status: { in: ['DRAFT', 'APPLIED', 'IN_REVIEW', 'INTERVIEW', 'OFFER'] },
       },
     });
 
@@ -508,31 +517,50 @@ export class JobsService {
       );
     }
 
-    const application = await prisma.jobApplication.create({
-      data: {
-        userId,
-        jobId,
-        coverNote: coverNote ? coverNote.trim() : null,
-        status: 'SUBMITTED',
-      },
-      include: {
-        job: {
-          select: {
-            id: true,
-            originalTitle: true,
-            normalizedTitle: true,
-            companyName: true,
+    const application = await prisma.$transaction(async (tx) => {
+      const app = await tx.jobApplication.create({
+        data: {
+          userId,
+          jobId,
+          source: 'PLATFORM',
+          status: 'APPLIED',
+          activeKey: `${userId}_${jobId}`,
+          jobTitle: job.normalizedTitle || job.originalTitle,
+          companyName: job.companyName || 'Unknown Company',
+          coverNote: coverNote ? coverNote.trim() : null,
+          appliedAt: new Date(),
+        },
+        include: {
+          job: {
+            select: {
+              id: true,
+              originalTitle: true,
+              normalizedTitle: true,
+              companyName: true,
+            },
           },
         },
-      },
+      });
+
+      await tx.jobApplicationHistory.create({
+        data: {
+          applicationId: app.id,
+          fromStatus: null,
+          toStatus: 'APPLIED',
+          reason: 'Direct platform application submission',
+          changedByUserId: userId,
+        },
+      });
+
+      return app;
     });
 
     return {
       applicationId: application.id,
       status: application.status,
       submittedAt: application.createdAt,
-      jobTitle: application.job.normalizedTitle || application.job.originalTitle,
-      companyName: application.job.companyName,
+      jobTitle: application.job?.normalizedTitle || application.job?.originalTitle,
+      companyName: application.job?.companyName,
     };
   }
 
@@ -575,19 +603,31 @@ export class JobsService {
         id: app.id,
         status: app.status,
         coverNote: app.coverNote,
-        submittedAt: app.createdAt,
+        submittedAt: app.appliedAt || app.createdAt,
         updatedAt: app.updatedAt,
-        job: {
-          id: app.job.id,
-          title: app.job.normalizedTitle || app.job.originalTitle,
-          companyName: app.job.companyName,
-          city: app.job.city,
-          country: app.job.country,
-          workArrangement: app.job.workArrangement,
-          employmentType: app.job.employmentType,
-          status: app.job.status,
-          categoryName: app.job.category?.name || 'General',
-        },
+        job: app.job
+          ? {
+              id: app.job.id,
+              title: app.job.normalizedTitle || app.job.originalTitle,
+              companyName: app.job.companyName,
+              city: app.job.city,
+              country: app.job.country,
+              workArrangement: app.job.workArrangement,
+              employmentType: app.job.employmentType,
+              status: app.job.status,
+              categoryName: app.job.category?.name || 'General',
+            }
+          : {
+              id: null,
+              title: app.externalJobTitle,
+              companyName: app.externalCompanyName,
+              city: app.externalLocation,
+              country: null,
+              workArrangement: null,
+              employmentType: null,
+              status: null,
+              categoryName: 'External',
+            },
       })),
       total,
       page: safePage,

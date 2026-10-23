@@ -210,3 +210,128 @@ export function getAvatarUrl(avatarPath) {
   return `${apiBase}${avatarPath.startsWith('/') ? '' : '/'}${avatarPath}`;
 }
 
+// ============================================================================
+// Application Tracking System (ATS) APIs
+// ============================================================================
+
+/**
+ * Fetch applications with status, source, search, sort, and pagination
+ */
+export async function fetchApplications(params = {}) {
+  const query = new URLSearchParams();
+  Object.entries(params).forEach(([key, value]) => {
+    if (value !== undefined && value !== null && value !== '') {
+      query.set(key, String(value));
+    }
+  });
+  const queryString = query.toString();
+  const endpoint = queryString ? `/applications?${queryString}` : '/applications';
+  const res = await apiClient.get(endpoint);
+  return res.data;
+}
+
+/**
+ * Fetch summary metrics for candidate applications dashboard
+ */
+export async function fetchApplicationStats() {
+  const res = await apiClient.get('/applications/stats');
+  return res.data;
+}
+
+/**
+ * Fetch single application details by ID (including history, interviews, reminders)
+ */
+export async function fetchApplicationById(id) {
+  const res = await apiClient.get(`/applications/${id}`);
+  return res.data;
+}
+
+/**
+ * Create a new application (Platform or External; Draft or Applied)
+ */
+export async function createApplication(data) {
+  const res = await apiClient.post('/applications', data);
+  return res.data;
+}
+
+/**
+ * Update an existing application (external fields, notes, archive)
+ */
+export async function updateApplication(id, data) {
+  const res = await apiClient.patch(`/applications/${id}`, data);
+  return res.data;
+}
+
+/**
+ * Transition application status with audit reason
+ */
+export async function updateApplicationStatus(id, status, reason = '') {
+  const res = await apiClient.post(`/applications/${id}/status`, { status, reason });
+  return res.data;
+}
+
+/**
+ * Voluntarily withdraw an application
+ */
+export async function withdrawApplication(id, reason = '') {
+  const res = await apiClient.post(`/applications/${id}/withdraw`, { reason });
+  return res.data;
+}
+
+/**
+ * Delete a draft application (submitted cannot be deleted)
+ */
+export async function deleteDraftApplication(id) {
+  const res = await apiClient.delete(`/applications/${id}`);
+  return res.data;
+}
+
+/**
+ * Schedule an interview round
+ */
+export async function scheduleInterview(id, data) {
+  const res = await apiClient.post(`/applications/${id}/interviews`, data);
+  return res.data;
+}
+
+/**
+ * Update an interview round
+ */
+export async function updateInterview(id, interviewId, data) {
+  const res = await apiClient.patch(`/applications/${id}/interviews/${interviewId}`, data);
+  return res.data;
+}
+
+/**
+ * Delete an interview round
+ */
+export async function deleteInterview(id, interviewId) {
+  const res = await apiClient.delete(`/applications/${id}/interviews/${interviewId}`);
+  return res.data;
+}
+
+/**
+ * Create a follow-up reminder
+ */
+export async function createReminder(id, data) {
+  const res = await apiClient.post(`/applications/${id}/reminders`, data);
+  return res.data;
+}
+
+/**
+ * Update a reminder (e.g. toggle completion)
+ */
+export async function updateReminder(id, reminderId, data) {
+  const res = await apiClient.patch(`/applications/${id}/reminders/${reminderId}`, data);
+  return res.data;
+}
+
+/**
+ * Delete a reminder
+ */
+export async function deleteReminder(id, reminderId) {
+  const res = await apiClient.delete(`/applications/${id}/reminders/${reminderId}`);
+  return res.data;
+}
+
+
