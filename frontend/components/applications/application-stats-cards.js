@@ -103,3 +103,4 @@ export function ApplicationStatsCards({ stats, isLoading = false, onSelectStatus
     </div>
   );
 }
+

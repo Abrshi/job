@@ -279,3 +279,4 @@ export function ScheduleInterviewModal({ applicationId, isOpen, onClose, onSucce
     </div>
   );
 }
+

@@ -147,3 +147,4 @@ export function StatusUpdateModal({ application, isOpen, onClose, onSuccess }) {
     </div>
   );
 }
+

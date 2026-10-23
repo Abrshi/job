@@ -1011,3 +1011,4 @@ export class ApplicationsService {
 }
 
 export const applicationsService = new ApplicationsService();
+

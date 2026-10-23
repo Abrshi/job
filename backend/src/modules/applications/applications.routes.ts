@@ -60,3 +60,4 @@ router.patch('/:id/reminders/:reminderId', validate(UpdateReminderSchema), updat
 router.delete('/:id/reminders/:reminderId', validate(ReminderParamsSchema), deleteReminder);
 
 export default router;
+
