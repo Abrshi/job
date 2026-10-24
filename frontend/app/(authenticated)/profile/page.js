@@ -37,6 +37,7 @@ export default function ProfilePage() {
   const [isUploadingAvatar, setIsUploadingAvatar] = useState(false);
   const [avatarError, setAvatarError] = useState(null);
   const [avatarSuccess, setAvatarSuccess] = useState(null);
+  const [avatarLoadError, setAvatarLoadError] = useState(false);
   const avatarInputRef = useRef(null);
 
   // Review extracted CV modal
@@ -75,6 +76,10 @@ export default function ProfilePage() {
       setCategories(catList || []);
       if (profileData) {
         setProfile(profileData);
+        if (profileData.avatarUrl && updateUserAvatar) {
+          updateUserAvatar(profileData.avatarUrl);
+        }
+        setAvatarLoadError(false);
         setFormData({
           displayName: profileData.displayName || '',
           headline: profileData.headline || '',
@@ -190,11 +195,12 @@ export default function ProfilePage() {
 
     try {
       const res = await uploadAvatar(file);
-      const newAvatarUrl = res.data?.avatarUrl;
+      const newAvatarUrl = res?.avatarUrl || res?.data?.avatarUrl;
       setProfile((prev) => (prev ? { ...prev, avatarUrl: newAvatarUrl } : prev));
       if (updateUserAvatar) {
         updateUserAvatar(newAvatarUrl);
       }
+      setAvatarLoadError(false);
       setAvatarSuccess('Profile picture updated successfully!');
       setTimeout(() => setAvatarSuccess(null), 3500);
     } catch (err) {
@@ -217,6 +223,7 @@ export default function ProfilePage() {
       if (updateUserAvatar) {
         updateUserAvatar(null);
       }
+      setAvatarLoadError(false);
       setAvatarSuccess('Profile picture removed.');
       setTimeout(() => setAvatarSuccess(null), 3500);
     } catch (err) {
@@ -225,6 +232,16 @@ export default function ProfilePage() {
       setIsUploadingAvatar(false);
     }
   };
+
+  const effectiveAvatarUrl = profile?.avatarUrl || user?.avatarUrl;
+  const hasAvatar = Boolean(effectiveAvatarUrl && !avatarLoadError);
+  const userInitial = (
+    profile?.displayName ||
+    [user?.firstName, user?.lastName].filter(Boolean).join(' ') ||
+    user?.firstName ||
+    user?.email ||
+    'U'
+  ).trim()[0]?.toUpperCase() || 'U';
 
   return (
     <div className="min-h-screen bg-gray-50/50 py-10">
@@ -256,18 +273,18 @@ export default function ProfilePage() {
             {/* Interactive Profile Circle */}
             <div className="flex flex-col items-center shrink-0">
               <div className="relative group">
-                <div className="w-20 h-20 sm:w-24 sm:h-24 rounded-full border-2 border-white shadow-md overflow-hidden bg-gradient-to-tr from-blue-600 to-indigo-600 flex items-center justify-center text-white font-extrabold text-2xl relative">
-                  {profile?.avatarUrl ? (
+                <div className="w-20 h-20 sm:w-24 sm:h-24 rounded-full border-2 border-white shadow-md overflow-hidden bg-gradient-to-tr from-blue-600 to-indigo-600 flex items-center justify-center text-white font-extrabold text-2xl relative select-none">
+                  {hasAvatar ? (
                     <img
-                      src={getAvatarUrl(profile.avatarUrl)}
-                      alt="Profile"
+                      src={getAvatarUrl(effectiveAvatarUrl)}
+                      alt={profile?.displayName || user?.firstName || 'Profile'}
                       className="w-full h-full object-cover"
-                      onError={(e) => {
-                        e.currentTarget.style.display = 'none';
+                      onError={() => {
+                        setAvatarLoadError(true);
                       }}
                     />
                   ) : (
-                    (profile?.displayName || user?.firstName || 'U')[0].toUpperCase()
+                    <span>{userInitial}</span>
                   )}
 
                   {isUploadingAvatar && (
@@ -310,7 +327,7 @@ export default function ProfilePage() {
                 />
               </div>
 
-              {profile?.avatarUrl && (
+              {hasAvatar && (
                 <button
                   type="button"
                   onClick={handleDeleteAvatar}

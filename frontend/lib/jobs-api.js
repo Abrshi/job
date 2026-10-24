@@ -190,7 +190,7 @@ export async function uploadAvatar(file) {
   const formData = new FormData();
   formData.append('avatar', file);
   const res = await apiClient.post('/profile/avatar', formData);
-  return res.data;
+  return res.data || res;
 }
 
 export async function deleteAvatar() {

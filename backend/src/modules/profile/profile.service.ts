@@ -114,6 +114,8 @@ export class ProfileService {
       displayName: profile.displayName || [user.firstName, user.lastName].filter(Boolean).join(' ') || null,
       preferredName: profile.preferredName,
       headline: profile.headline,
+      avatarUrl: profile.avatarUrl || null,
+      avatarFileId: profile.avatarFileId || null,
       phoneNumber: profile.phoneNumber,
       professionalEmail: profile.professionalEmail,
       country: profile.country,
