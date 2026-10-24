@@ -10,6 +10,7 @@ import { fetchJobById, saveJob, unsaveJob, applyJob, createApplication } from '@
 import { useAuth } from '@/hooks/use-auth';
 import { formatSalary, formatRelativeTime } from '@/components/job-card';
 import { StatusBadge } from '@/components/applications/status-badge';
+import { DocumentGenerationModal } from '@/components/documents/document-generation-modal';
 
 function JobDetailsContent() {
   const params = useParams();
@@ -24,6 +25,7 @@ function JobDetailsContent() {
 
   // Internal Application Modal state
   const [isApplyModalOpen, setIsApplyModalOpen] = useState(false);
+  const [isDocModalOpen, setIsDocModalOpen] = useState(false);
   const [coverNote, setCoverNote] = useState('');
   const [isSubmittingApp, setIsSubmittingApp] = useState(false);
   const [applyError, setApplyError] = useState(null);
@@ -378,6 +380,38 @@ function JobDetailsContent() {
               )}
             </div>
 
+            {/* AI Application Documents Card */}
+            <div className="bg-gradient-to-br from-blue-50/80 via-white to-slate-50 border border-blue-200/80 rounded-2xl p-5 shadow-card space-y-3">
+              <div className="flex items-center gap-2">
+                <span className="p-1 rounded-lg bg-blue-100 text-blue-700">
+                  <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
+                  </svg>
+                </span>
+                <h3 className="text-xs font-bold text-blue-950 uppercase tracking-wider">
+                  AI Application Documents
+                </h3>
+              </div>
+              <p className="text-xs text-stormy-muted leading-relaxed">
+                Generate a tailored CV, cover letter, or outbound email custom-fitted for this role, grounded in your verified experience.
+              </p>
+              <Button
+                variant="outline"
+                size="sm"
+                className="w-full bg-white border-blue-300 text-blue-900 hover:bg-blue-50 hover:border-blue-400 font-semibold gap-1.5 shadow-subtle"
+                onClick={() => {
+                  if (!isAuthenticated) {
+                    router.push(`/?returnUrl=/jobs/${job.id}`);
+                  } else {
+                    setIsDocModalOpen(true);
+                  }
+                }}
+              >
+                <span>⚡</span>
+                <span>Prepare Application Documents</span>
+              </Button>
+            </div>
+
             {/* Overview Details Box */}
             <div className="bg-white border border-stormy-border rounded-2xl p-6 shadow-card space-y-4 text-xs">
               <h2 className="text-sm font-bold text-stormy-dark uppercase tracking-wider pb-2 border-b border-stormy-border">
@@ -528,6 +562,13 @@ function JobDetailsContent() {
           </div>
         </div>
       )}
+
+      {/* AI Document Generation Wizard Modal */}
+      <DocumentGenerationModal
+        isOpen={isDocModalOpen}
+        onClose={() => setIsDocModalOpen(false)}
+        job={job}
+      />
     </div>
   );
 }

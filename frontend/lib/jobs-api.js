@@ -444,5 +444,19 @@ export async function clearReadNotifications() {
   return res.data;
 }
 
+/**
+ * AI Application Documents
+ */
+export {
+  generateDocument,
+  fetchGeneratedDocuments,
+  fetchGeneratedDocumentById,
+  saveDocumentVersion,
+  downloadGeneratedDocument,
+  attachDocumentToApplication,
+  deleteGeneratedDocument,
+} from './ai-documents-api.js';
+
+
 
 

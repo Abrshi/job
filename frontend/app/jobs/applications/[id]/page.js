@@ -20,6 +20,7 @@ import {
 import { StatusBadge } from '@/components/applications/status-badge';
 import { StatusUpdateModal } from '@/components/applications/status-update-modal';
 import { ScheduleInterviewModal } from '@/components/applications/schedule-interview-modal';
+import { DocumentGenerationModal } from '@/components/documents/document-generation-modal';
 
 function ApplicationDetailContent() {
   const params = useParams();
@@ -30,6 +31,7 @@ function ApplicationDetailContent() {
   const [application, setApplication] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [isDocModalOpen, setIsDocModalOpen] = useState(false);
 
   // Modals
   const [isStatusModalOpen, setIsStatusModalOpen] = useState(false);
@@ -626,6 +628,28 @@ function ApplicationDetailContent() {
               )}
             </div>
 
+            {/* AI Application Documents Card */}
+            <div className="bg-gradient-to-br from-blue-50/70 via-white to-slate-50 border border-blue-200/80 rounded-2xl p-6 shadow-card space-y-3 text-xs">
+              <div className="flex items-center justify-between pb-2 border-b border-stormy-border">
+                <h2 className="text-sm font-bold text-blue-950 uppercase tracking-wider flex items-center gap-1.5">
+                  <span>⚡</span>
+                  <span>AI Application Documents</span>
+                </h2>
+              </div>
+              <p className="text-stormy-muted leading-relaxed">
+                Generate a fact-grounded tailored CV, cover letter, or outbound email specifically customized for {application.companyName}.
+              </p>
+              <Button
+                variant="outline"
+                size="sm"
+                className="w-full bg-white border-blue-300 text-blue-900 hover:bg-blue-50 hover:border-blue-400 font-semibold gap-1.5 shadow-subtle"
+                onClick={() => setIsDocModalOpen(true)}
+              >
+                <span>⚡</span>
+                <span>Prepare Application Documents</span>
+              </Button>
+            </div>
+
             {/* Follow-up Reminders Checklist */}
             <div className="bg-white border border-stormy-border rounded-2xl p-6 shadow-card space-y-4 text-xs">
               <h2 className="text-sm font-bold text-stormy-dark uppercase tracking-wider pb-2 border-b border-stormy-border">
@@ -761,6 +785,23 @@ function ApplicationDetailContent() {
           isOpen={isInterviewModalOpen}
           onClose={() => setIsInterviewModalOpen(false)}
           onSuccess={() => loadApplication()}
+        />
+      )}
+
+      {/* AI Document Generation Modal */}
+      {isDocModalOpen && (
+        <DocumentGenerationModal
+          isOpen={isDocModalOpen}
+          onClose={() => setIsDocModalOpen(false)}
+          applicationId={application.id}
+          job={
+            application.job || {
+              id: application.jobId || null,
+              normalizedTitle: application.jobTitle,
+              companyName: application.companyName,
+              city: application.location,
+            }
+          }
         />
       )}
     </div>

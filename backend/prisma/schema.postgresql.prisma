@@ -155,6 +155,19 @@ enum NotificationDeliveryStatus {
   SKIPPED
 }
 
+enum GeneratedDocumentType {
+  TAILORED_CV
+  COVER_LETTER
+  APPLICATION_EMAIL
+}
+
+enum GenerationStatus {
+  DRAFT
+  GENERATING
+  COMPLETED
+  FAILED
+}
+
 model User {
   id              String           @id @default(uuid())
   email           String           @unique
@@ -174,6 +187,7 @@ model User {
   documents       UserDocument[]
   savedSearches   SavedSearch[]
   notifications   JobNotification[]
+  generatedDocuments GeneratedDocument[]
 
   @@map("users")
 }
@@ -268,6 +282,7 @@ model Job {
   savedBy                  SavedJob[]
   applications             JobApplication[]
   notifications            JobNotification[]
+  generatedDocuments       GeneratedDocument[]
 
   @@unique([sourceId, fingerprint])
   @@index([sourceId])
@@ -440,6 +455,7 @@ model JobApplication {
   history                  JobApplicationHistory[]
   interviews               JobApplicationInterview[]
   reminders                JobApplicationReminder[]
+  generatedDocuments       GeneratedDocument[]
 
   @@index([userId])
   @@index([jobId])
@@ -527,6 +543,7 @@ model UserDocument {
   updatedAt                 DateTime                 @updatedAt @map("updated_at")
   applicationsAsCv          JobApplication[]         @relation("ApplicationCv")
   applicationsAsCoverLetter JobApplication[]         @relation("ApplicationCoverLetter")
+  generatedVersions         GeneratedDocumentVersion[]
 
   @@index([userId])
   @@index([documentType])
@@ -745,4 +762,67 @@ model JobNotification {
   @@index([savedSearchId])
   @@map("job_notifications")
 }
+
+model GeneratedDocument {
+  id                    String                   @id @default(uuid())
+  userId                String                   @map("user_id")
+  user                  User                     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  documentType          GeneratedDocumentType    @map("document_type")
+  title                 String                   @db.VarChar(255)
+
+  // Target Job Association (Platform or External)
+  jobId                 String?                  @map("job_id")
+  job                   Job?                     @relation(fields: [jobId], references: [id], onDelete: SetNull)
+  targetJobTitle        String                   @map("target_job_title") @db.VarChar(255)
+  targetCompanyName     String                   @map("target_company_name") @db.VarChar(255)
+  targetJobDescription String?                  @map("target_job_description") @db.Text
+
+  // Optional Direct Application Association
+  applicationId         String?                  @map("application_id")
+  application           JobApplication?          @relation(fields: [applicationId], references: [id], onDelete: SetNull)
+
+  // Current Version Pointer & State
+  currentVersionNumber  Int                      @default(1) @map("current_version_number")
+  status                GenerationStatus         @default(DRAFT)
+  failureReason         String?                  @map("failure_reason") @db.Text
+
+  createdAt             DateTime                 @default(now()) @map("created_at")
+  updatedAt             DateTime                 @updatedAt @map("updated_at")
+
+  versions              GeneratedDocumentVersion[]
+
+  @@index([userId])
+  @@index([jobId])
+  @@index([applicationId])
+  @@index([documentType])
+  @@map("generated_documents")
+}
+
+model GeneratedDocumentVersion {
+  id                 String            @id @default(uuid())
+  documentId         String            @map("document_id")
+  document           GeneratedDocument @relation(fields: [documentId], references: [id], onDelete: Cascade)
+  versionNumber      Int               @map("version_number")
+
+  // Content Payloads
+  content            String            @db.Text
+  structuredData     Json?             @map("structured_data")
+  subjectLine        String?           @map("subject_line") @db.VarChar(500)
+
+  // Generation & Audit Metadata
+  promptVersion      String            @map("prompt_version") @db.VarChar(50)
+  modelIdentifier    String            @map("model_identifier") @db.VarChar(100)
+  changeSummary      String?           @map("change_summary") @db.VarChar(255)
+
+  // Optional Stored Document Reference (if exported to UserDocument / Drive)
+  compiledDocumentId String?           @map("compiled_document_id")
+  compiledDocument   UserDocument?     @relation(fields: [compiledDocumentId], references: [id], onDelete: SetNull)
+
+  createdAt          DateTime          @default(now()) @map("created_at")
+
+  @@unique([documentId, versionNumber])
+  @@index([documentId])
+  @@map("generated_document_versions")
+}
+
 
