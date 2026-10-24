@@ -24,6 +24,9 @@ import {
   getAvatarProxy,
   getMyAvatarProxy,
   deleteAvatar,
+  requestPhoneVerification,
+  confirmPhoneVerification,
+  getVerificationStatus,
 } from './profile.controller';
 import { validate } from '../../middleware/validate';
 import { authenticate } from '../../middleware/authenticate';
@@ -37,6 +40,8 @@ import {
   LanguageSchema,
   AchievementSchema,
   ConfirmExtractedProfileSchema,
+  RequestPhoneVerificationSchema,
+  ConfirmPhoneVerificationSchema,
 } from './profile.validation';
 
 const router = Router();
@@ -94,5 +99,10 @@ router.delete('/languages/:id', deleteLanguage);
 // Achievements
 router.post('/achievements', validate(AchievementSchema), addAchievement);
 router.delete('/achievements/:id', deleteAchievement);
+
+// Verification endpoints
+router.get('/verification-status', getVerificationStatus);
+router.post('/phone/request-verification', validate(RequestPhoneVerificationSchema), requestPhoneVerification);
+router.post('/phone/confirm-verification', validate(ConfirmPhoneVerificationSchema), confirmPhoneVerification);
 
 export default router;

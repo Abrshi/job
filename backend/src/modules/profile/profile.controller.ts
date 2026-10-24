@@ -1,5 +1,6 @@
 import { Request, Response, NextFunction } from 'express';
 import { profileService } from './profile.service';
+import { verificationService } from '../verification/verification.service';
 
 export const getProfile = async (req: Request, res: Response, next: NextFunction) => {
   try {
@@ -281,3 +282,54 @@ export const deleteAvatar = async (req: Request, res: Response, next: NextFuncti
     next(err);
   }
 };
+
+// Phone & Verification Management
+export const requestPhoneVerification = async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const userId = req.user!.userId;
+    const phoneNumber = req.body?.phoneNumber;
+    const result = await verificationService.requestPhoneVerification(userId, phoneNumber);
+    res.status(200).json({
+      status: 'success',
+      message: result.message,
+      data: {
+        phoneNumber: result.phoneNumber,
+        cooldownSeconds: result.cooldownSeconds,
+        gatewayStatus: result.gatewayStatus,
+      },
+    });
+  } catch (err) {
+    next(err);
+  }
+};
+
+export const confirmPhoneVerification = async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const userId = req.user!.userId;
+    const code = req.body?.code;
+    const result = await verificationService.confirmPhoneVerification(userId, code);
+    res.status(200).json({
+      status: 'success',
+      message: result.message,
+      data: {
+        phoneNumber: result.phoneNumber,
+      },
+    });
+  } catch (err) {
+    next(err);
+  }
+};
+
+export const getVerificationStatus = async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const userId = req.user!.userId;
+    const status = await verificationService.getVerificationStatus(userId);
+    res.status(200).json({
+      status: 'success',
+      data: { status },
+    });
+  } catch (err) {
+    next(err);
+  }
+};
+

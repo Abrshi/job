@@ -44,6 +44,7 @@ export class ProfileService {
         lastName: true,
         role: true,
         isEmailVerified: true,
+        emailVerifiedAt: true,
         createdAt: true,
         profile: {
           include: {
@@ -109,6 +110,9 @@ export class ProfileService {
       lastName: user.lastName,
       role: user.role,
       isEmailVerified: user.isEmailVerified,
+      emailVerifiedAt: user.emailVerifiedAt,
+      isPhoneVerified: Boolean(profile.isPhoneVerified),
+      phoneVerifiedAt: profile.phoneVerifiedAt,
       createdAt: user.createdAt,
       profileId: profile.id,
       displayName: profile.displayName || [user.firstName, user.lastName].filter(Boolean).join(' ') || null,
@@ -175,7 +179,20 @@ export class ProfileService {
     if (data.displayName !== undefined) profileData.displayName = data.displayName;
     if (data.preferredName !== undefined) profileData.preferredName = data.preferredName;
     if (data.headline !== undefined) profileData.headline = data.headline;
-    if (data.phoneNumber !== undefined) profileData.phoneNumber = data.phoneNumber;
+    if (data.phoneNumber !== undefined) {
+      const existingProfile = await prisma.userProfile.findUnique({
+        where: { userId },
+        select: { phoneNumber: true, isPhoneVerified: true },
+      });
+      const newPhone = data.phoneNumber ? String(data.phoneNumber).trim() : null;
+      if (existingProfile && existingProfile.phoneNumber !== newPhone) {
+        profileData.phoneNumber = newPhone;
+        profileData.isPhoneVerified = false;
+        profileData.phoneVerifiedAt = null;
+      } else {
+        profileData.phoneNumber = newPhone;
+      }
+    }
     if (data.professionalEmail !== undefined) profileData.professionalEmail = data.professionalEmail;
     if (data.country !== undefined) profileData.country = data.country;
     if (data.city !== undefined) profileData.city = data.city;

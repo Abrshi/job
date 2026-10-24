@@ -7,6 +7,8 @@ export const JobQuerySchema = z.object({
     limit: z.coerce.number().int().min(1).max(50).default(20),
     search: z.string().trim().max(100).optional(),
     category: z.string().trim().max(100).optional(),
+    source: z.string().trim().max(100).optional(),
+    status: z.enum(['ACTIVE', 'EXPIRED', 'CLOSED', 'ARCHIVED', 'ALL']).optional(),
     city: z.string().trim().max(100).optional(),
     country: z.string().trim().max(100).optional(),
     workArrangement: z.nativeEnum(WorkArrangement).optional(),
@@ -14,7 +16,7 @@ export const JobQuerySchema = z.object({
     experienceLevel: z.nativeEnum(ExperienceLevel).optional(),
     minSalary: z.coerce.number().min(0).optional(),
     maxSalary: z.coerce.number().min(0).optional(),
-    sortBy: z.enum(['publishedAt', 'firstSeenAt', 'closingDate']).default('publishedAt'),
+    sortBy: z.enum(['publishedAt', 'firstSeenAt', 'closingDate', 'salaryMax']).default('publishedAt'),
     sortOrder: z.enum(['asc', 'desc']).default('desc'),
   }),
 });

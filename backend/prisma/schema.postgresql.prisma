@@ -168,6 +168,12 @@ enum GenerationStatus {
   FAILED
 }
 
+enum VerificationType {
+  EMAIL_VERIFICATION
+  PHONE_VERIFICATION
+  PASSWORD_RESET
+}
+
 model User {
   id              String           @id @default(uuid())
   email           String           @unique
@@ -178,6 +184,7 @@ model User {
   isActive        Boolean          @default(true)
   lastLoginAt     DateTime?
   isEmailVerified Boolean          @default(false)
+  emailVerifiedAt DateTime?
   createdAt       DateTime         @default(now())
   updatedAt       DateTime         @updatedAt
   refreshSessions RefreshSession[]
@@ -188,6 +195,7 @@ model User {
   savedSearches   SavedSearch[]
   notifications   JobNotification[]
   generatedDocuments GeneratedDocument[]
+  verificationCodes  VerificationCode[]
 
   @@map("users")
 }
@@ -377,6 +385,8 @@ model UserProfile {
   avatarUrl                String?
   avatarFileId             String?
   phoneNumber              String?
+  isPhoneVerified          Boolean          @default(false)
+  phoneVerifiedAt          DateTime?
   professionalEmail        String?
   country                  String?
   city                     String?
@@ -824,5 +834,27 @@ model GeneratedDocumentVersion {
   @@index([documentId])
   @@map("generated_document_versions")
 }
+
+model VerificationCode {
+  id          String           @id @default(uuid())
+  userId      String           @map("user_id")
+  user        User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  type        VerificationType
+  target      String           // normalized email or phone number
+  codeHash    String           @map("code_hash")
+  attempts    Int              @default(0)
+  maxAttempts Int              @default(5) @map("max_attempts")
+  isUsed      Boolean          @default(false) @map("is_used")
+  expiresAt   DateTime         @map("expires_at")
+  consumedAt  DateTime?        @map("consumed_at")
+  createdAt   DateTime         @default(now()) @map("created_at")
+  updatedAt   DateTime         @updatedAt @map("updated_at")
+
+  @@index([userId, type])
+  @@index([target, type])
+  @@index([expiresAt])
+  @@map("verification_codes")
+}
+
 
 

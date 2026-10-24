@@ -7,7 +7,7 @@ import { Navbar } from '@/components/navbar';
 import { JobCard } from '@/components/job-card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { fetchJobs, fetchCategories, saveJob, unsaveJob } from '@/lib/jobs-api';
+import { fetchJobs, fetchCategories, fetchSources, saveJob, unsaveJob } from '@/lib/jobs-api';
 import { useAuth } from '@/hooks/use-auth';
 import { SaveSearchModal } from '@/components/jobs/save-search-modal';
 
@@ -20,6 +20,7 @@ function JobsContent() {
   // Data states
   const [jobs, setJobs] = useState([]);
   const [categories, setCategories] = useState([]);
+  const [sources, setSources] = useState([]);
   const [total, setTotal] = useState(0);
   const [totalPages, setTotalPages] = useState(1);
   const [isLoading, setIsLoading] = useState(true);
@@ -32,6 +33,8 @@ function JobsContent() {
   // Read filters from URL
   const page = Number(searchParams.get('page')) || 1;
   const search = searchParams.get('search') || '';
+  const source = searchParams.get('source') || '';
+  const status = searchParams.get('status') || '';
   const category = searchParams.get('category') || '';
   const workArrangement = searchParams.get('workArrangement') || '';
   const employmentType = searchParams.get('employmentType') || '';
@@ -50,17 +53,39 @@ function JobsContent() {
     setSearchInput(search);
   }, [search]);
 
-  // Load categories once
+  // Load categories and sources once
   useEffect(() => {
-    async function loadCategories() {
+    async function loadTaxonomies() {
       try {
-        const catList = await fetchCategories();
+        const [catList, srcList] = await Promise.all([
+          fetchCategories().catch((err) => {
+            console.error('Failed to load categories:', err);
+            return [];
+          }),
+          fetchSources().catch((err) => {
+            console.error('Failed to load sources:', err);
+            return [];
+          }),
+        ]);
+
         setCategories(catList || []);
+        if (srcList && srcList.length > 0) {
+          setSources(srcList);
+        } else {
+          setSources([
+            { slug: 'hahujobs', name: 'HaHuJobs' },
+            { slug: 'afriwork', name: 'Afriwork' },
+          ]);
+        }
       } catch (err) {
-        console.error('Failed to load categories:', err);
+        console.error('Failed to load taxonomies:', err);
+        setSources([
+          { slug: 'hahujobs', name: 'HaHuJobs' },
+          { slug: 'afriwork', name: 'Afriwork' },
+        ]);
       }
     }
-    loadCategories();
+    loadTaxonomies();
   }, []);
 
   // Update URL params helper
@@ -99,6 +124,8 @@ function JobsContent() {
         const data = await fetchJobs({
           page,
           search,
+          source,
+          status,
           category,
           workArrangement,
           employmentType,
@@ -135,6 +162,8 @@ function JobsContent() {
   }, [
     page,
     search,
+    source,
+    status,
     category,
     workArrangement,
     employmentType,
@@ -202,7 +231,9 @@ function JobsContent() {
   };
 
   const activeFiltersCount = [
+    source,
     category,
+    status && status !== 'ACTIVE' ? status : '',
     workArrangement,
     employmentType,
     experienceLevel,
@@ -216,9 +247,9 @@ function JobsContent() {
       <Navbar />
 
       {/* Hero / Search Header */}
-      <section className="bg-gradient-to-b from-white to-stormy-canvas border-b border-stormy-border py-8 sm:py-12 px-4 sm:px-6 lg:px-8">
-        <div className="max-w-7xl mx-auto">
-          <div className="max-w-3xl">
+      <section className="bg-gradient-to-b from-white to-stormy-canvas border-b border-stormy-border py-8 sm:py-10 px-4 sm:px-6 lg:px-8">
+        <div className="w-full max-w-[1760px] mx-auto">
+          <div className="max-w-4xl">
             <h1 className="text-2xl sm:text-4xl font-extrabold text-stormy-main tracking-tight">
               Explore Job Opportunities
             </h1>
@@ -228,7 +259,7 @@ function JobsContent() {
           </div>
 
           {/* Search Bar */}
-          <form onSubmit={handleSearchSubmit} className="mt-6 flex flex-col sm:flex-row gap-3">
+          <form onSubmit={handleSearchSubmit} className="mt-6 flex flex-col sm:flex-row gap-3 max-w-4xl">
             <div className="relative flex-1">
               <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-stormy-muted">
                 <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -266,7 +297,7 @@ function JobsContent() {
       </section>
 
       {/* Main Content: Filter Sidebar + Job Grid */}
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 w-full flex-1">
+      <main className="w-full max-w-[1760px] mx-auto px-4 sm:px-6 lg:px-8 py-8 flex-1">
         <div className="flex flex-col lg:flex-row gap-8 items-start">
           {/* Mobile Filter Toggle */}
           <div className="lg:hidden w-full flex items-center justify-between pb-4 border-b border-stormy-border">
@@ -300,9 +331,9 @@ function JobsContent() {
             </span>
           </div>
 
-          {/* Sidebar Filter Panel */}
+          {/* Sidebar Filter Panel - Sticky on scroll */}
           <aside
-            className={`w-full lg:w-72 bg-white border border-stormy-border rounded-2xl p-5 shadow-card flex-shrink-0 ${
+            className={`w-full lg:w-72 bg-white border border-stormy-border rounded-2xl p-5 shadow-card flex-shrink-0 lg:sticky lg:top-20 lg:self-start lg:max-h-[calc(100vh-6rem)] lg:overflow-y-auto ${
               showMobileFilters ? 'block' : 'hidden lg:block'
             }`}
           >
@@ -321,7 +352,27 @@ function JobsContent() {
               )}
             </div>
 
-            <div className="space-y-6 pt-5">
+            <div className="space-y-5 pt-5">
+              {/* Source Filter */}
+              <div>
+                <label htmlFor="filter-source" className="block text-xs font-bold text-stormy-dark mb-1.5 uppercase tracking-wide">
+                  Source
+                </label>
+                <select
+                  id="filter-source"
+                  value={source}
+                  onChange={(e) => updateFilters({ source: e.target.value })}
+                  className="w-full bg-white border border-stormy-border rounded-lg px-3 py-2 text-xs text-stormy-main focus:outline-none focus:ring-2 focus:ring-stormy-sky"
+                >
+                  <option value="">All Sources</option>
+                  {sources.map((s) => (
+                    <option key={s.id || s.slug} value={s.slug}>
+                      {s.name} {s.jobCount !== undefined && s.jobCount !== null ? `(${s.jobCount})` : ''}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
               {/* Category Filter */}
               <div>
                 <label htmlFor="filter-category" className="block text-xs font-bold text-stormy-dark mb-1.5 uppercase tracking-wide">
@@ -342,6 +393,24 @@ function JobsContent() {
                 </select>
               </div>
 
+              {/* Status Filter */}
+              <div>
+                <label htmlFor="filter-status" className="block text-xs font-bold text-stormy-dark mb-1.5 uppercase tracking-wide">
+                  Status
+                </label>
+                <select
+                  id="filter-status"
+                  value={status || 'ACTIVE'}
+                  onChange={(e) => updateFilters({ status: e.target.value === 'ACTIVE' ? '' : e.target.value })}
+                  className="w-full bg-white border border-stormy-border rounded-lg px-3 py-2 text-xs text-stormy-main focus:outline-none focus:ring-2 focus:ring-stormy-sky"
+                >
+                  <option value="ACTIVE">ACTIVE (Published)</option>
+                  <option value="ALL">All Statuses</option>
+                  <option value="EXPIRED">Expired</option>
+                  <option value="CLOSED">Closed</option>
+                </select>
+              </div>
+
               {/* Work Arrangement */}
               <div>
                 <span className="block text-xs font-bold text-stormy-dark mb-2 uppercase tracking-wide">
@@ -349,7 +418,7 @@ function JobsContent() {
                 </span>
                 <div className="space-y-1.5">
                   {[
-                    { value: '', label: 'Any Arrangement' },
+                    { value: '', label: 'All Locations' },
                     { value: 'REMOTE', label: 'Remote Only' },
                     { value: 'HYBRID', label: 'Hybrid' },
                     { value: 'ON_SITE', label: 'On-site' },
@@ -366,26 +435,6 @@ function JobsContent() {
                     </label>
                   ))}
                 </div>
-              </div>
-
-              {/* Employment Type */}
-              <div>
-                <label htmlFor="filter-employment" className="block text-xs font-bold text-stormy-dark mb-1.5 uppercase tracking-wide">
-                  Employment Type
-                </label>
-                <select
-                  id="filter-employment"
-                  value={employmentType}
-                  onChange={(e) => updateFilters({ employmentType: e.target.value })}
-                  className="w-full bg-white border border-stormy-border rounded-lg px-3 py-2 text-xs text-stormy-main focus:outline-none focus:ring-2 focus:ring-stormy-sky"
-                >
-                  <option value="">All Types</option>
-                  <option value="FULL_TIME">Full-time</option>
-                  <option value="PART_TIME">Part-time</option>
-                  <option value="CONTRACT">Contract</option>
-                  <option value="INTERNSHIP">Internship</option>
-                  <option value="FREELANCE">Freelance</option>
-                </select>
               </div>
 
               {/* Experience Level */}
@@ -406,6 +455,44 @@ function JobsContent() {
                   <option value="SENIOR">Senior</option>
                   <option value="LEAD">Lead</option>
                   <option value="EXECUTIVE">Executive</option>
+                </select>
+              </div>
+
+              {/* Sort By Controls */}
+              <div>
+                <label htmlFor="filter-sortby" className="block text-xs font-bold text-stormy-dark mb-1.5 uppercase tracking-wide">
+                  Sort By
+                </label>
+                <select
+                  id="filter-sortby"
+                  value={sortBy}
+                  onChange={(e) => updateFilters({ sortBy: e.target.value })}
+                  className="w-full bg-white border border-stormy-border rounded-lg px-3 py-2 text-xs text-stormy-main focus:outline-none focus:ring-2 focus:ring-stormy-sky"
+                >
+                  <option value="publishedAt">Most recently published</option>
+                  <option value="firstSeenAt">Newest additions</option>
+                  <option value="closingDate">Closing soon</option>
+                  <option value="salaryMax">Highest salary</option>
+                </select>
+              </div>
+
+              {/* Employment Type */}
+              <div>
+                <label htmlFor="filter-employment" className="block text-xs font-bold text-stormy-dark mb-1.5 uppercase tracking-wide">
+                  Employment Type
+                </label>
+                <select
+                  id="filter-employment"
+                  value={employmentType}
+                  onChange={(e) => updateFilters({ employmentType: e.target.value })}
+                  className="w-full bg-white border border-stormy-border rounded-lg px-3 py-2 text-xs text-stormy-main focus:outline-none focus:ring-2 focus:ring-stormy-sky"
+                >
+                  <option value="">All Types</option>
+                  <option value="FULL_TIME">Full-time</option>
+                  <option value="PART_TIME">Part-time</option>
+                  <option value="CONTRACT">Contract</option>
+                  <option value="INTERNSHIP">Internship</option>
+                  <option value="FREELANCE">Freelance</option>
                 </select>
               </div>
 
@@ -477,10 +564,130 @@ function JobsContent() {
                     <option value="publishedAt">Most recently published</option>
                     <option value="firstSeenAt">Newest additions</option>
                     <option value="closingDate">Closing soon</option>
+                    <option value="salaryMax">Highest salary</option>
                   </select>
                 </div>
               </div>
             </div>
+
+            {/* Active Filters Pill Strip */}
+            {(source || category || (status && status !== 'ACTIVE') || workArrangement || experienceLevel || employmentType || city || minSalary) && (
+              <div className="flex flex-wrap items-center gap-2 pt-1 pb-2">
+                <span className="text-xs text-stormy-muted font-medium">Active filters:</span>
+
+                {source && (
+                  <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium bg-stormy-sky/10 text-stormy-dark border border-stormy-sky/30">
+                    Source: {sources.find((s) => s.slug === source || s.id === source)?.name || source}
+                    <button
+                      type="button"
+                      onClick={() => updateFilters({ source: '' })}
+                      className="hover:text-stormy-sky cursor-pointer ml-0.5 font-bold"
+                    >
+                      &times;
+                    </button>
+                  </span>
+                )}
+
+                {category && (
+                  <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium bg-stormy-sky/10 text-stormy-dark border border-stormy-sky/30">
+                    Category: {categories.find((c) => c.slug === category || c.id === category)?.name || category}
+                    <button
+                      type="button"
+                      onClick={() => updateFilters({ category: '' })}
+                      className="hover:text-stormy-sky cursor-pointer ml-0.5 font-bold"
+                    >
+                      &times;
+                    </button>
+                  </span>
+                )}
+
+                {status && status !== 'ACTIVE' && (
+                  <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium bg-stormy-sky/10 text-stormy-dark border border-stormy-sky/30">
+                    Status: {status}
+                    <button
+                      type="button"
+                      onClick={() => updateFilters({ status: '' })}
+                      className="hover:text-stormy-sky cursor-pointer ml-0.5 font-bold"
+                    >
+                      &times;
+                    </button>
+                  </span>
+                )}
+
+                {workArrangement && (
+                  <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium bg-stormy-sky/10 text-stormy-dark border border-stormy-sky/30">
+                    Arrangement: {workArrangement === 'REMOTE' ? 'Remote Only' : workArrangement === 'HYBRID' ? 'Hybrid' : 'On-site'}
+                    <button
+                      type="button"
+                      onClick={() => updateFilters({ workArrangement: '' })}
+                      className="hover:text-stormy-sky cursor-pointer ml-0.5 font-bold"
+                    >
+                      &times;
+                    </button>
+                  </span>
+                )}
+
+                {experienceLevel && (
+                  <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium bg-stormy-sky/10 text-stormy-dark border border-stormy-sky/30">
+                    Level: {experienceLevel === 'ENTRY' ? 'Entry Level' : experienceLevel === 'JUNIOR' ? 'Junior' : experienceLevel === 'MID' ? 'Mid Level' : experienceLevel === 'SENIOR' ? 'Senior' : experienceLevel === 'LEAD' ? 'Lead' : experienceLevel === 'EXECUTIVE' ? 'Executive' : experienceLevel}
+                    <button
+                      type="button"
+                      onClick={() => updateFilters({ experienceLevel: '' })}
+                      className="hover:text-stormy-sky cursor-pointer ml-0.5 font-bold"
+                    >
+                      &times;
+                    </button>
+                  </span>
+                )}
+
+                {employmentType && (
+                  <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium bg-stormy-sky/10 text-stormy-dark border border-stormy-sky/30">
+                    Type: {employmentType}
+                    <button
+                      type="button"
+                      onClick={() => updateFilters({ employmentType: '' })}
+                      className="hover:text-stormy-sky cursor-pointer ml-0.5 font-bold"
+                    >
+                      &times;
+                    </button>
+                  </span>
+                )}
+
+                {city && (
+                  <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium bg-stormy-sky/10 text-stormy-dark border border-stormy-sky/30">
+                    City: {city}
+                    <button
+                      type="button"
+                      onClick={() => updateFilters({ city: '' })}
+                      className="hover:text-stormy-sky cursor-pointer ml-0.5 font-bold"
+                    >
+                      &times;
+                    </button>
+                  </span>
+                )}
+
+                {minSalary && (
+                  <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium bg-stormy-sky/10 text-stormy-dark border border-stormy-sky/30">
+                    Min: {Number(minSalary).toLocaleString()} ETB
+                    <button
+                      type="button"
+                      onClick={() => updateFilters({ minSalary: '' })}
+                      className="hover:text-stormy-sky cursor-pointer ml-0.5 font-bold"
+                    >
+                      &times;
+                    </button>
+                  </span>
+                )}
+
+                <button
+                  type="button"
+                  onClick={handleClearAllFilters}
+                  className="text-xs font-semibold text-stormy-sky hover:underline ml-1"
+                >
+                  Clear all
+                </button>
+              </div>
+            )}
 
             {/* Error State */}
             {error && (
@@ -494,7 +701,7 @@ function JobsContent() {
 
             {/* Loading Skeletons */}
             {isLoading ? (
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
                 {[...Array(6)].map((_, i) => (
                   <div
                     key={i}
@@ -535,7 +742,7 @@ function JobsContent() {
               </div>
             ) : (
               /* Job Cards Grid */
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
                 {jobs.map((job) => (
                   <JobCard
                     key={job.id}
@@ -637,7 +844,7 @@ export default function JobsPage() {
       fallback={
         <div className="min-h-screen flex flex-col bg-stormy-canvas text-stormy-main">
           <Navbar />
-          <main className="max-w-7xl mx-auto px-4 py-16 text-center">
+          <main className="w-full max-w-[1760px] mx-auto px-4 py-16 text-center">
             <div className="w-8 h-8 mx-auto border-2 border-stormy-sky border-t-transparent rounded-full animate-spin" />
           </main>
         </div>

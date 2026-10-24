@@ -143,7 +143,7 @@ function NotificationsContent() {
 
       {/* Header */}
       <section className="bg-gradient-to-b from-white to-stormy-canvas border-b border-stormy-border py-8 px-4 sm:px-6 lg:px-8">
-        <div className="max-w-7xl mx-auto flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+        <div className="w-full max-w-[1760px] mx-auto flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
           <div>
             <div className="flex items-center gap-2">
               <span className="w-2 h-2 rounded-full bg-stormy-sky" />
@@ -173,7 +173,7 @@ function NotificationsContent() {
       </section>
 
       {/* Main Content */}
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 w-full flex-1">
+      <main className="w-full max-w-[1760px] mx-auto px-4 sm:px-6 lg:px-8 py-8 flex-1">
         {/* Filter Tabs & Bulk Actions */}
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between pb-4 border-b border-stormy-border gap-4">
           <div className="flex items-center gap-2">
@@ -430,7 +430,7 @@ export default function NotificationsPage() {
         fallback={
           <div className="min-h-screen flex flex-col bg-stormy-canvas text-stormy-main">
             <Navbar />
-            <div className="max-w-7xl mx-auto px-4 py-16 text-center">
+            <div className="w-full max-w-[1760px] mx-auto px-4 py-16 text-center">
               <div className="w-8 h-8 mx-auto border-2 border-stormy-sky border-t-transparent rounded-full animate-spin" />
             </div>
           </div>

@@ -287,3 +287,4 @@ describe('HahuJobsAdapter Unit Tests', () => {
     }
   });
 });
+

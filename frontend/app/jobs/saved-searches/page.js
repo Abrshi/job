@@ -149,7 +149,7 @@ function SavedSearchesContent() {
 
       {/* Header */}
       <section className="bg-gradient-to-b from-white to-stormy-canvas border-b border-stormy-border py-8 px-4 sm:px-6 lg:px-8">
-        <div className="max-w-7xl mx-auto flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+        <div className="w-full max-w-[1760px] mx-auto flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
           <div>
             <div className="flex items-center gap-2">
               <span className="w-2 h-2 rounded-full bg-stormy-sky" />
@@ -179,7 +179,7 @@ function SavedSearchesContent() {
       </section>
 
       {/* Main Content */}
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 w-full flex-1">
+      <main className="w-full max-w-[1760px] mx-auto px-4 sm:px-6 lg:px-8 py-8 flex-1">
         {isLoading ? (
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             {[1, 2, 3, 4].map((i) => (
@@ -462,7 +462,7 @@ export default function SavedSearchesPage() {
         fallback={
           <div className="min-h-screen flex flex-col bg-stormy-canvas text-stormy-main">
             <Navbar />
-            <div className="max-w-7xl mx-auto px-4 py-16 text-center">
+            <div className="w-full max-w-[1760px] mx-auto px-4 py-16 text-center">
               <div className="w-8 h-8 mx-auto border-2 border-stormy-sky border-t-transparent rounded-full animate-spin" />
             </div>
           </div>

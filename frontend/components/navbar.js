@@ -2,17 +2,66 @@
 
 import React, { useState } from 'react';
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
+import { useRouter, usePathname } from 'next/navigation';
 import { useAuth } from '@/hooks/use-auth';
 import { Button } from '@/components/ui/button';
 import { getAvatarUrl } from '@/lib/jobs-api';
 import { NotificationBell } from '@/components/notifications/notification-bell';
 
-export function Navbar() {
+function NavbarContent() {
   const { user, isAuthenticated, loading, logout } = useAuth();
   const router = useRouter();
+  const pathname = usePathname() || '';
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [isLoggingOut, setIsLoggingOut] = useState(false);
+
+  const isNavActive = (href) => {
+    if (href === '/jobs') {
+      return (
+        pathname === '/jobs' ||
+        (pathname.startsWith('/jobs/') &&
+          !pathname.startsWith('/jobs/saved') &&
+          !pathname.startsWith('/jobs/saved-searches') &&
+          !pathname.startsWith('/jobs/applications'))
+      );
+    }
+    if (href === '/jobs/saved') {
+      return pathname === '/jobs/saved' || pathname.startsWith('/jobs/saved/');
+    }
+    if (href === '/jobs/saved-searches') {
+      return pathname === '/jobs/saved-searches' || pathname.startsWith('/jobs/saved-searches/');
+    }
+    if (href === '/jobs/applications') {
+      return pathname === '/jobs/applications' || pathname.startsWith('/jobs/applications/');
+    }
+    if (href === '/documents') {
+      return pathname === '/documents' || pathname.startsWith('/documents/');
+    }
+    if (href === '/profile') {
+      return pathname === '/profile' || pathname.startsWith('/profile/');
+    }
+    if (href === '/notifications') {
+      return pathname === '/notifications' || pathname.startsWith('/notifications/');
+    }
+    if (href === '/admin') {
+      return pathname.startsWith('/admin');
+    }
+    return pathname === href;
+  };
+
+  const getDesktopNavLinkClass = (href) => {
+    const active = isNavActive(href);
+    return active
+      ? 'px-3 py-1.5 rounded-lg text-sm font-bold text-stormy-dark bg-stormy-sky/20 border border-stormy-sky/40 transition-colors shadow-2xs'
+      : 'px-3 py-1.5 rounded-lg text-sm font-medium text-stormy-muted hover:text-stormy-dark hover:bg-stormy-canvas transition-colors';
+  };
+
+  const getMobileNavLinkClass = (href) => {
+    const active = isNavActive(href);
+    return active
+      ? 'block px-3 py-2 rounded-lg text-sm font-bold bg-stormy-sky/20 text-stormy-dark border border-stormy-sky/30'
+      : 'block px-3 py-2 rounded-lg text-sm font-medium text-stormy-muted hover:text-stormy-dark hover:bg-stormy-canvas';
+  };
 
   const handleLogout = async () => {
     setIsLoggingOut(true);
@@ -43,11 +92,11 @@ export function Navbar() {
 
   return (
     <header className="sticky top-0 z-40 w-full bg-white border-b border-stormy-border">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      <div className="w-full max-w-[1760px] mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex items-center justify-between h-16">
           {/* Logo & Brand */}
-          <div className="flex items-center gap-8">
-            <Link href="/" className="flex items-center gap-2 group">
+          <div className="flex items-center gap-6 xl:gap-8">
+            <Link href="/" className="flex items-center gap-2 group shrink-0">
               <div className="w-8 h-8 rounded-lg bg-stormy-dark flex items-center justify-center text-stormy-sky font-bold text-lg shadow-subtle group-hover:bg-stormy-darkHover transition-colors">
                 J
               </div>
@@ -57,25 +106,25 @@ export function Navbar() {
             </Link>
 
             {/* Desktop Navigation */}
-            <nav className="hidden md:flex items-center gap-6 text-sm font-medium text-stormy-muted">
-              <Link href="/jobs" className="hover:text-stormy-dark transition-colors">
+            <nav className="hidden md:flex items-center gap-1.5 text-sm text-stormy-muted">
+              <Link href="/jobs" className={getDesktopNavLinkClass('/jobs')}>
                 Browse Jobs
               </Link>
               {isAuthenticated && (
                 <>
-                  <Link href="/jobs/saved" className="hover:text-stormy-dark transition-colors">
+                  <Link href="/jobs/saved" className={getDesktopNavLinkClass('/jobs/saved')}>
                     Saved Jobs
                   </Link>
-                  <Link href="/jobs/saved-searches" className="hover:text-stormy-dark transition-colors">
+                  <Link href="/jobs/saved-searches" className={getDesktopNavLinkClass('/jobs/saved-searches')}>
                     Saved Searches
                   </Link>
-                  <Link href="/jobs/applications" className="hover:text-stormy-dark transition-colors">
+                  <Link href="/jobs/applications" className={getDesktopNavLinkClass('/jobs/applications')}>
                     Applications
                   </Link>
-                  <Link href="/documents" className="hover:text-stormy-dark transition-colors">
+                  <Link href="/documents" className={getDesktopNavLinkClass('/documents')}>
                     My Documents
                   </Link>
-                  <Link href="/profile" className="hover:text-stormy-dark transition-colors">
+                  <Link href="/profile" className={getDesktopNavLinkClass('/profile')}>
                     Profile
                   </Link>
                 </>
@@ -83,7 +132,11 @@ export function Navbar() {
               {isAuthenticated && user?.role === 'ADMIN' && (
                 <Link
                   href="/admin"
-                  className="font-semibold text-stormy-sky hover:text-stormy-skyHover transition-colors flex items-center gap-1.5"
+                  className={
+                    isNavActive('/admin')
+                      ? 'px-3 py-1.5 rounded-lg text-sm font-bold text-stormy-dark bg-stormy-sky/30 border border-stormy-sky/50 flex items-center gap-1.5 shadow-2xs'
+                      : 'px-3 py-1.5 rounded-lg text-sm font-semibold text-stormy-sky hover:text-stormy-skyHover hover:bg-stormy-sky/10 transition-colors flex items-center gap-1.5'
+                  }
                 >
                   <span className="w-1.5 h-1.5 rounded-full bg-stormy-sky" />
                   Admin Console
@@ -173,11 +226,11 @@ export function Navbar() {
 
       {/* Mobile Menu Dropdown */}
       {isMobileMenuOpen && (
-        <div className="md:hidden border-t border-stormy-border bg-white px-4 pt-2 pb-4 space-y-3 shadow-card">
+        <div className="md:hidden border-t border-stormy-border bg-white px-4 pt-2 pb-4 space-y-1.5 shadow-card">
           <Link
             href="/jobs"
             onClick={() => setIsMobileMenuOpen(false)}
-            className="block py-2 text-sm font-medium text-stormy-muted hover:text-stormy-dark"
+            className={getMobileNavLinkClass('/jobs')}
           >
             Browse Jobs
           </Link>
@@ -187,64 +240,70 @@ export function Navbar() {
               <Link
                 href="/jobs/saved"
                 onClick={() => setIsMobileMenuOpen(false)}
-                className="block py-2 text-sm font-medium text-stormy-muted hover:text-stormy-dark"
+                className={getMobileNavLinkClass('/jobs/saved')}
               >
                 Saved Jobs
               </Link>
               <Link
                 href="/jobs/saved-searches"
                 onClick={() => setIsMobileMenuOpen(false)}
-                className="block py-2 text-sm font-medium text-stormy-muted hover:text-stormy-dark"
+                className={getMobileNavLinkClass('/jobs/saved-searches')}
               >
                 Saved Searches
               </Link>
               <Link
                 href="/notifications"
                 onClick={() => setIsMobileMenuOpen(false)}
-                className="block py-2 text-sm font-medium text-stormy-muted hover:text-stormy-dark"
+                className={getMobileNavLinkClass('/notifications')}
               >
                 Notifications
               </Link>
               <Link
                 href="/jobs/applications"
                 onClick={() => setIsMobileMenuOpen(false)}
-                className="block py-2 text-sm font-medium text-stormy-muted hover:text-stormy-dark"
+                className={getMobileNavLinkClass('/jobs/applications')}
               >
                 My Applications
               </Link>
               <Link
                 href="/documents"
                 onClick={() => setIsMobileMenuOpen(false)}
-                className="block py-2 text-sm font-medium text-stormy-muted hover:text-stormy-dark"
+                className={getMobileNavLinkClass('/documents')}
               >
                 My Documents
               </Link>
               <Link
                 href="/profile"
                 onClick={() => setIsMobileMenuOpen(false)}
-                className="flex items-center gap-2.5 py-2 text-sm font-medium text-stormy-muted hover:text-stormy-dark"
+                className={getMobileNavLinkClass('/profile')}
               >
-                <div className="w-6 h-6 rounded-full bg-stormy-mist/50 border border-stormy-mist flex items-center justify-center text-[10px] font-semibold text-stormy-dark overflow-hidden shrink-0">
-                  {user?.avatarUrl ? (
-                    <img
-                      src={getAvatarUrl(user.avatarUrl)}
-                      alt={displayName}
-                      className="w-full h-full object-cover"
-                      onError={(e) => {
-                        e.currentTarget.style.display = 'none';
-                      }}
-                    />
-                  ) : (
-                    displayName.charAt(0).toUpperCase()
-                  )}
+                <div className="flex items-center gap-2.5">
+                  <div className="w-6 h-6 rounded-full bg-stormy-mist/50 border border-stormy-mist flex items-center justify-center text-[10px] font-semibold text-stormy-dark overflow-hidden shrink-0">
+                    {user?.avatarUrl ? (
+                      <img
+                        src={getAvatarUrl(user.avatarUrl)}
+                        alt={displayName}
+                        className="w-full h-full object-cover"
+                        onError={(e) => {
+                          e.currentTarget.style.display = 'none';
+                        }}
+                      />
+                    ) : (
+                      displayName.charAt(0).toUpperCase()
+                    )}
+                  </div>
+                  <span>My Profile ({displayName})</span>
                 </div>
-                <span>My Profile ({displayName})</span>
               </Link>
               {user?.role === 'ADMIN' && (
                 <Link
                   href="/admin"
                   onClick={() => setIsMobileMenuOpen(false)}
-                  className="block py-2 text-sm font-bold text-stormy-sky hover:text-stormy-skyHover"
+                  className={
+                    isNavActive('/admin')
+                      ? 'block px-3 py-2 rounded-lg text-sm font-bold bg-stormy-sky/30 text-stormy-dark border border-stormy-sky/40'
+                      : 'block px-3 py-2 rounded-lg text-sm font-bold text-stormy-sky hover:text-stormy-skyHover hover:bg-stormy-sky/10'
+                  }
                 >
                   Admin Console &rarr;
                 </Link>
@@ -293,5 +352,30 @@ export function Navbar() {
         </div>
       )}
     </header>
+  );
+}
+
+function NavbarFallback() {
+  return (
+    <header className="sticky top-0 z-40 w-full bg-white border-b border-stormy-border">
+      <div className="w-full max-w-[1760px] mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
+        <div className="flex items-center gap-2">
+          <div className="w-8 h-8 rounded-lg bg-stormy-dark flex items-center justify-center text-stormy-sky font-bold text-lg">
+            J
+          </div>
+          <span className="font-semibold text-lg text-stormy-dark tracking-tight">
+            Job<span className="text-stormy-sky">Platform</span>
+          </span>
+        </div>
+      </div>
+    </header>
+  );
+}
+
+export function Navbar() {
+  return (
+    <React.Suspense fallback={<NavbarFallback />}>
+      <NavbarContent />
+    </React.Suspense>
   );
 }

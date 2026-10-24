@@ -171,7 +171,38 @@ export class ProfileCompletionService {
       recommendation: prefScore === 10 ? 'Completed' : 'Set your preferred roles, locations, and salary expectation',
     });
 
-    // Sum overall earned percentage
+    // 8. Contact & Identity Verification (Weight: 5% - +2.5% Email, +2.5% Phone)
+    let verifScore = 0;
+    const verifMissing: string[] = [];
+    const isEmailVerif = Boolean(profile.user?.isEmailVerified);
+    const isPhoneVerif = Boolean(profile.isPhoneVerified);
+
+    if (isEmailVerif) {
+      verifScore += 2.5;
+    } else {
+      verifMissing.push('Verified email address (+2.5%)');
+    }
+
+    if (isPhoneVerif) {
+      verifScore += 2.5;
+    } else {
+      verifMissing.push('Verified phone number (+2.5%)');
+    }
+
+    sections.push({
+      id: 'verification',
+      title: 'Email & Phone Verification',
+      weight: 5,
+      earned: verifScore,
+      completed: isEmailVerif && isPhoneVerif,
+      missingFields: verifMissing,
+      recommendation:
+        verifMissing.length > 0
+          ? `Verify your ${verifMissing.map((m) => m.replace(' (+2.5%)', '')).join(' and ')}`
+          : 'Completed',
+    });
+
+    // Sum overall earned percentage (capped at 100%)
     const totalEarned = sections.reduce((acc, s) => acc + s.earned, 0);
     const completedCount = sections.filter((s) => s.completed).length;
 
@@ -186,7 +217,7 @@ export class ProfileCompletionService {
       : null;
 
     return {
-      percentage: Math.min(100, Math.max(0, totalEarned)),
+      percentage: Math.min(100, Math.round(totalEarned)),
       isComplete: totalEarned >= 85, // 85% or above considered comprehensive
       completedCount,
       totalSections: sections.length,

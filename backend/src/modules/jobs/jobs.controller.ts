@@ -38,6 +38,18 @@ export const getCategories = async (req: Request, res: Response, next: NextFunct
   }
 };
 
+export const getSources = async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const sources = await jobsService.getSources();
+    res.status(200).json({
+      status: 'success',
+      data: { sources },
+    });
+  } catch (err) {
+    next(err);
+  }
+};
+
 export const saveJob = async (req: Request, res: Response, next: NextFunction) => {
   try {
     const jobId = Array.isArray(req.params.id) ? req.params.id[0] : req.params.id;

@@ -5,6 +5,8 @@ import { env } from '../../config/env';
 import { AppError } from '../../middleware/error-handler';
 import { authRepository, AuthRepository } from './auth.repository';
 import { AuthTokens, AuthUserPayload, LoginDTO, RegisterDTO, UserResponse } from './auth.types';
+import { verificationService } from '../verification/verification.service';
+import { logger } from '../../lib/logger';
 
 export class AuthService {
   constructor(private readonly repo: AuthRepository = authRepository) {}
@@ -54,6 +56,11 @@ export class AuthService {
     const tokenHash = this.hashToken(tokens.refreshToken);
     const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000); // 7 days
     await this.repo.createSession(user.id, tokenHash, expiresAt);
+
+    // Automatically dispatch email verification in background
+    verificationService.requestEmailVerification(user.id).catch((err) => {
+      logger.error(`[AuthService] Auto-dispatch verification email failed: ${err.message}`);
+    });
 
     return {
       user: {

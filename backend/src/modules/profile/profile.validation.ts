@@ -187,4 +187,16 @@ export const ConfirmExtractedProfileSchema = z.object({
     .strict(),
 });
 
+export const RequestPhoneVerificationSchema = z.object({
+  body: z.object({
+    phoneNumber: z.string().trim().min(5, 'Phone number is required').max(35),
+  }),
+});
+
+export const ConfirmPhoneVerificationSchema = z.object({
+  body: z.object({
+    code: z.string().trim().min(4, 'Verification code is required').max(10),
+  }),
+});
+
 export type UpdateProfileInput = z.infer<typeof UpdateProfileSchema>['body'];

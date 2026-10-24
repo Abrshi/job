@@ -3,6 +3,7 @@ import {
   getJobs,
   getJobById,
   getCategories,
+  getSources,
   saveJob,
   unsaveJob,
   getSavedJobs,
@@ -22,6 +23,9 @@ const router = Router();
 
 // Public taxonomy categories
 router.get('/categories', getCategories);
+
+// Public sources
+router.get('/sources', getSources);
 
 // Authenticated Seeker Saved Jobs
 router.get('/saved', authenticate, validate(PaginationQuerySchema), getSavedJobs);

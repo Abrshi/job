@@ -27,6 +27,14 @@ export async function fetchCategories() {
 }
 
 /**
+ * Fetch public job sources with live active job counts
+ */
+export async function fetchSources() {
+  const res = await apiClient.get('/jobs/sources');
+  return res.data.sources;
+}
+
+/**
  * Fetch single job details by ID
  */
 export async function fetchJobById(id) {

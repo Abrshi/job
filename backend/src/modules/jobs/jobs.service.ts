@@ -24,19 +24,40 @@ export class JobsService {
         : undefined;
 
     const andConditions: Prisma.JobWhereInput[] = [
-      { status: 'ACTIVE' },
       {
         classificationStatus: {
           notIn: ['FAILED', 'REVIEW_REQUIRED'],
         },
       },
-      {
+    ];
+
+    // Status Filter (defaults to ACTIVE unless explicitly requested)
+    const statusFilter = options.status || 'ACTIVE';
+    if (statusFilter === 'ACTIVE') {
+      andConditions.push({ status: 'ACTIVE' });
+      andConditions.push({
         OR: [
           { closingDate: null },
           { closingDate: { gte: now } },
         ],
-      },
-    ];
+      });
+    } else if (statusFilter !== 'ALL') {
+      andConditions.push({ status: statusFilter as any });
+    }
+
+    // Source Filter (support slug, id, or provider name)
+    if (options.source && options.source.toLowerCase() !== 'all') {
+      const src = options.source.trim();
+      andConditions.push({
+        source: {
+          OR: [
+            { slug: src },
+            { id: src },
+            { name: { contains: src } },
+          ],
+        },
+      });
+    }
 
     // Keyword Search across title, company, description
     if (options.search) {
@@ -112,6 +133,8 @@ export class JobsService {
     } else if (options.sortBy === 'closingDate') {
       // Prioritize jobs closing soon
       orderBy = { closingDate: options.sortOrder || 'asc' };
+    } else if (options.sortBy === 'salaryMax') {
+      orderBy = { salaryMax: options.sortOrder || 'desc' };
     } else {
       orderBy = { publishedAt: options.sortOrder || 'desc' };
     }
@@ -335,6 +358,41 @@ export class JobsService {
       slug: c.slug,
       description: c.description,
       jobCount: c._count.jobs,
+    }));
+  }
+
+  /**
+   * Retrieve active and available job sources with live job counts
+   */
+  async getSources() {
+    const now = new Date();
+    const sources = await prisma.jobSource.findMany({
+      orderBy: { name: 'asc' },
+      select: {
+        id: true,
+        name: true,
+        slug: true,
+        isActive: true,
+        _count: {
+          select: {
+            jobs: {
+              where: {
+                status: 'ACTIVE',
+                classificationStatus: { notIn: ['FAILED', 'REVIEW_REQUIRED'] },
+                OR: [{ closingDate: null }, { closingDate: { gte: now } }],
+              },
+            },
+          },
+        },
+      },
+    });
+
+    return sources.map((s) => ({
+      id: s.id,
+      name: s.name,
+      slug: s.slug,
+      isActive: s.isActive,
+      jobCount: s._count.jobs,
     }));
   }
 

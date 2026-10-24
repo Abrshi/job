@@ -36,3 +36,4 @@ main().catch((err) => {
   console.error('HaHuJobs sync failed:', err);
   process.exit(1);
 });
+

@@ -48,6 +48,11 @@ const rawClientId = sanitizeEnvString(
     process.env.CLIENT_ID
 );
 
+const rawEmailUser = sanitizeEnvString(process.env.EMAIL_USER);
+const rawGoogleAppPassword = sanitizeEnvString(process.env.GOOGLE_APP_PASSWORD);
+const rawSmsDeviceToken = sanitizeEnvString(process.env.SMS_DEVICE_TOKEN);
+const rawSmsApiUrl = sanitizeEnvString(process.env.SMS_API_URL);
+
 const envSchema = z.object({
   NODE_ENV: z.enum(['development', 'test', 'production']).default('development'),
   PORT: z.coerce.number().default(5000),
@@ -71,6 +76,10 @@ const envSchema = z.object({
   GOOGLE_CLIENT_ID: z.string().optional(),
   CLIENT_ID: z.string().optional(),
   MAX_UPLOAD_SIZE_MB: z.coerce.number().default(10),
+  EMAIL_USER: z.string().optional(),
+  GOOGLE_APP_PASSWORD: z.string().optional(),
+  SMS_DEVICE_TOKEN: z.string().optional(),
+  SMS_API_URL: z.string().default('https://sms-connect.vercel.app'),
 });
 
 export type Env = z.infer<typeof envSchema>;
@@ -88,6 +97,10 @@ const parseEnv = (): Env => {
     FOLDER_ID: rawDriveFolderId,
     GOOGLE_CLIENT_ID: rawClientId,
     CLIENT_ID: rawClientId,
+    EMAIL_USER: rawEmailUser,
+    GOOGLE_APP_PASSWORD: rawGoogleAppPassword,
+    SMS_DEVICE_TOKEN: rawSmsDeviceToken,
+    SMS_API_URL: rawSmsApiUrl || 'https://sms-connect.vercel.app',
   };
 
   const result = envSchema.safeParse(mergedEnv);

@@ -170,7 +170,7 @@ export default function AdminLayout({ children }) {
 
       {/* Sidebar Navigation */}
       <aside
-        className={`fixed inset-y-0 left-0 z-40 w-64 bg-stormy-dark text-white flex flex-col transform transition-transform duration-200 ease-in-out lg:translate-x-0 lg:static lg:inset-auto ${
+        className={`fixed inset-y-0 left-0 z-40 w-64 bg-stormy-dark text-white flex flex-col transform transition-transform duration-200 ease-in-out lg:translate-x-0 lg:sticky lg:top-0 lg:h-screen lg:shrink-0 ${
           mobileMenuOpen ? 'translate-x-0' : '-translate-x-full'
         }`}
       >
@@ -241,8 +241,8 @@ export default function AdminLayout({ children }) {
       </aside>
 
       {/* Main Content Area */}
-      <div className="flex-1 flex flex-col min-w-0 overflow-y-auto">
-        <header className="hidden lg:flex items-center justify-between bg-white border-b border-stormy-border px-8 py-4 shadow-subtle">
+      <div className="flex-1 flex flex-col min-w-0">
+        <header className="hidden lg:flex items-center justify-between bg-white border-b border-stormy-border px-8 py-4 shadow-subtle sticky top-0 z-30">
           <div>
             <h1 className="text-lg font-bold text-stormy-main tracking-tight capitalize">
               {NAV_ITEMS.find((item) =>
@@ -264,7 +264,7 @@ export default function AdminLayout({ children }) {
           </div>
         </header>
 
-        <main className="flex-1 p-4 sm:p-6 lg:p-8 max-w-7xl w-full mx-auto">
+        <main className="flex-1 p-4 sm:p-6 lg:p-8 max-w-[1760px] w-full mx-auto">
           {children}
         </main>
       </div>

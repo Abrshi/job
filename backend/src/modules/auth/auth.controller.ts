@@ -2,6 +2,7 @@ import { Request, Response } from 'express';
 import { env } from '../../config/env';
 import { AppError } from '../../middleware/error-handler';
 import { authService, AuthService } from './auth.service';
+import { verificationService } from '../verification/verification.service';
 
 const COOKIE_NAME = 'refreshToken';
 const COOKIE_OPTIONS = {
@@ -74,6 +75,35 @@ export class AuthController {
     res.status(200).json({
       status: 'success',
       data: { user },
+    });
+  };
+
+  verifyEmail = async (req: Request, res: Response) => {
+    const token = (req.query.token as string) || req.body?.token;
+    const code = (req.query.code as string) || req.body?.code;
+    const email = (req.query.email as string) || req.body?.email;
+
+    const result = await verificationService.verifyEmail({ token, code, email });
+    res.status(200).json({
+      status: 'success',
+      message: result.message,
+    });
+  };
+
+  resendVerification = async (req: Request, res: Response) => {
+    const email =
+      req.body?.email ||
+      (req.user ? (await this.service.getCurrentUser(req.user.userId)).email : undefined);
+
+    if (!email) {
+      throw AppError.badRequest('Email is required', 'EMAIL_REQUIRED');
+    }
+
+    const result = await verificationService.resendEmailVerificationByEmail(email);
+    res.status(200).json({
+      status: 'success',
+      message: result.message,
+      cooldownSeconds: result.cooldownSeconds,
     });
   };
 }

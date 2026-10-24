@@ -39,5 +39,21 @@ router.get(
   asyncHandler(authController.me)
 );
 
+// Email verification
+router.get(
+  '/verify-email',
+  asyncHandler(authController.verifyEmail)
+);
+
+router.post(
+  '/verify-email',
+  asyncHandler(authController.verifyEmail)
+);
+
+router.post(
+  '/resend-verification',
+  asyncHandler(authController.resendVerification)
+);
+
 export default router;
 

@@ -20,6 +20,8 @@ import { EducationSection } from '@/components/profile/education-section';
 import { SkillsSection } from '@/components/profile/skills-section';
 import { ProjectsSection } from '@/components/profile/projects-section';
 import { DocumentsTab } from '@/components/profile/documents-tab';
+import { PhoneVerificationModal } from '@/components/profile/phone-verification-modal';
+import { resendEmailVerification } from '@/lib/verification-api';
 
 export default function ProfilePage() {
   const { user, isEmailVerified, logout, updateUserAvatar } = useAuth();
@@ -43,6 +45,12 @@ export default function ProfilePage() {
   // Review extracted CV modal
   const [extractedCvDoc, setExtractedCvDoc] = useState(null);
   const [showReviewModal, setShowReviewModal] = useState(false);
+
+  // Phone & Email Verification State
+  const [phoneModalOpen, setPhoneModalOpen] = useState(false);
+  const [emailCooldown, setEmailCooldown] = useState(0);
+  const [emailStatus, setEmailStatus] = useState(null);
+  const [isSendingEmail, setIsSendingEmail] = useState(false);
 
   // Manual Profile / Preferences form
   const [formData, setFormData] = useState({
@@ -112,6 +120,37 @@ export default function ProfilePage() {
       loadProfileData();
     }
   }, [user]);
+
+  // Email verification cooldown ticker
+  useEffect(() => {
+    if (emailCooldown <= 0) return;
+    const timer = setInterval(() => {
+      setEmailCooldown((prev) => (prev > 0 ? prev - 1 : 0));
+    }, 1000);
+    return () => clearInterval(timer);
+  }, [emailCooldown]);
+
+  const handleResendEmail = async () => {
+    const targetEmail = user?.email;
+    if (!targetEmail || emailCooldown > 0) return;
+    setIsSendingEmail(true);
+    setEmailStatus(null);
+    try {
+      await resendEmailVerification(targetEmail);
+      setEmailStatus('Verification email sent! Please check your inbox.');
+      setEmailCooldown(60);
+    } catch (err) {
+      setEmailStatus(err.message || 'Failed to dispatch verification email.');
+    } finally {
+      setIsSendingEmail(false);
+    }
+  };
+
+  const handlePhoneVerified = (verifiedNumber) => {
+    setFormData((prev) => ({ ...prev, phoneNumber: verifiedNumber }));
+    setSaveSuccess('Phone number verified successfully! (+2.5% Profile Strength)');
+    loadProfileData();
+  };
 
   const handleCvExtracted = (doc) => {
     setExtractedCvDoc(doc);
@@ -343,14 +382,39 @@ export default function ProfilePage() {
                 <h1 className="text-2xl font-bold text-gray-900">
                   {profile?.displayName || [user?.firstName, user?.lastName].filter(Boolean).join(' ') || 'Candidate Profile'}
                 </h1>
-                {isEmailVerified ? (
-                  <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200">
-                    ✓ Verified
+                {isEmailVerified || profile?.isEmailVerified ? (
+                  <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200">
+                    <svg className="w-3 h-3 text-emerald-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
+                    </svg>
+                    Email Verified
                   </span>
                 ) : (
-                  <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold bg-amber-50 text-amber-700 border border-amber-200">
-                    Unverified
+                  <button
+                    type="button"
+                    onClick={handleResendEmail}
+                    disabled={emailCooldown > 0 || isSendingEmail}
+                    className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-amber-50 text-amber-700 border border-amber-200 hover:bg-amber-100 transition-colors cursor-pointer"
+                  >
+                    {emailCooldown > 0 ? `Resend Email (${emailCooldown}s)` : 'Verify Email (+2.5%)'}
+                  </button>
+                )}
+
+                {profile?.isPhoneVerified ? (
+                  <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200">
+                    <svg className="w-3 h-3 text-emerald-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
+                    </svg>
+                    Phone Verified
                   </span>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={() => setPhoneModalOpen(true)}
+                    className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-blue-50 text-blue-700 border border-blue-200 hover:bg-blue-100 transition-colors cursor-pointer"
+                  >
+                    Verify Phone (+2.5%)
+                  </button>
                 )}
               </div>
               <p className="text-sm text-gray-600 mt-1 font-medium">
@@ -397,7 +461,12 @@ export default function ProfilePage() {
         <ProfileCompletionCard
           completion={profile?.completion}
           onNavigateSection={(secId) => {
-            if (['personal', 'preferences'].includes(secId)) setActiveTab(secId === 'personal' ? 'overview' : 'preferences');
+            if (['personal', 'preferences', 'verification'].includes(secId)) {
+              setActiveTab(secId === 'preferences' ? 'preferences' : 'overview');
+              if (secId === 'verification' && !profile?.isPhoneVerified) {
+                setPhoneModalOpen(true);
+              }
+            }
             else if (secId === 'experience') setActiveTab('experience');
             else if (secId === 'education') setActiveTab('education');
             else if (secId === 'skills') setActiveTab('skills');
@@ -483,10 +552,25 @@ export default function ProfilePage() {
                 </div>
 
                 <div>
-                  <label className="block text-xs font-semibold text-gray-700 mb-1">Phone Number</label>
+                  <div className="flex items-center justify-between mb-1">
+                    <label className="block text-xs font-semibold text-gray-700">Phone Number</label>
+                    {profile?.isPhoneVerified ? (
+                      <span className="text-[11px] font-semibold text-emerald-600 bg-emerald-50 border border-emerald-200 px-2 py-0.5 rounded-full">
+                        ✓ Verified (+2.5%)
+                      </span>
+                    ) : (
+                      <button
+                        type="button"
+                        onClick={() => setPhoneModalOpen(true)}
+                        className="text-[11px] font-semibold text-blue-600 hover:text-blue-700 underline cursor-pointer"
+                      >
+                        Verify via SMS (+2.5%)
+                      </button>
+                    )}
+                  </div>
                   <input
                     type="tel"
-                    placeholder="+251..."
+                    placeholder="+251 91 123 4567 or 0911234567"
                     value={formData.phoneNumber}
                     onChange={(e) => setFormData({ ...formData, phoneNumber: e.target.value })}
                     className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
@@ -494,10 +578,39 @@ export default function ProfilePage() {
                 </div>
 
                 <div>
-                  <label className="block text-xs font-semibold text-gray-700 mb-1">Professional Email</label>
+                  <div className="flex items-center justify-between mb-1">
+                    <label className="block text-xs font-semibold text-gray-700">Account / Primary Email</label>
+                    {isEmailVerified || profile?.isEmailVerified ? (
+                      <span className="text-[11px] font-semibold text-emerald-600 bg-emerald-50 border border-emerald-200 px-2 py-0.5 rounded-full">
+                        ✓ Verified (+2.5%)
+                      </span>
+                    ) : (
+                      <button
+                        type="button"
+                        onClick={handleResendEmail}
+                        disabled={emailCooldown > 0 || isSendingEmail}
+                        className="text-[11px] font-semibold text-blue-600 hover:text-blue-700 underline cursor-pointer disabled:text-gray-400 disabled:no-underline"
+                      >
+                        {emailCooldown > 0 ? `Resend (${emailCooldown}s)` : 'Verify Email (+2.5%)'}
+                      </button>
+                    )}
+                  </div>
                   <input
                     type="email"
-                    placeholder="you@domain.com"
+                    value={user?.email || ''}
+                    disabled
+                    className="w-full px-3 py-2 text-sm border border-gray-200 bg-gray-50 text-gray-500 rounded-lg cursor-not-allowed"
+                  />
+                  {emailStatus && (
+                    <p className="text-[11px] text-blue-600 font-medium mt-1">{emailStatus}</p>
+                  )}
+                </div>
+
+                <div>
+                  <label className="block text-xs font-semibold text-gray-700 mb-1">Professional / Alternate Email</label>
+                  <input
+                    type="email"
+                    placeholder="alternate@domain.com"
                     value={formData.professionalEmail}
                     onChange={(e) => setFormData({ ...formData, professionalEmail: e.target.value })}
                     className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
@@ -734,6 +847,14 @@ export default function ProfilePage() {
             onConfirmed={handleCvConfirmed}
           />
         )}
+
+        {/* Phone Verification Modal */}
+        <PhoneVerificationModal
+          isOpen={phoneModalOpen}
+          onClose={() => setPhoneModalOpen(false)}
+          initialPhoneNumber={formData.phoneNumber || profile?.phoneNumber}
+          onVerified={handlePhoneVerified}
+        />
       </div>
     </div>
   );

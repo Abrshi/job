@@ -1,19 +1,21 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/hooks/use-auth';
+import { apiClient } from '@/lib/api-client';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Alert } from '@/components/ui/alert';
 
 export function AuthCard({ initialTab = 'login' }) {
   const router = useRouter();
-  const { user, isAuthenticated, loading: authLoading, login, register, logout } = useAuth();
+  const { user, isAuthenticated, loading: authLoading, login, register, logout, refreshUser } = useAuth();
 
-  // Active view: 'login' | 'register' | 'forgot-password'
+  // Active view: 'login' | 'register' | 'verify-email' | 'forgot-password'
   const [activeTab, setActiveTab] = useState(initialTab);
+  const [justRegistered, setJustRegistered] = useState(false);
 
   // --- Sign In State ---
   const [loginEmail, setLoginEmail] = useState('');
@@ -34,13 +36,75 @@ export function AuthCard({ initialTab = 'login' }) {
   const [regErrors, setRegErrors] = useState({});
   const [regSubmitError, setRegSubmitError] = useState(null);
   const [isRegistering, setIsRegistering] = useState(false);
-  const [regSuccess, setRegSuccess] = useState(false);
+
+  // --- Verification Menu State ---
+  const [verificationEmail, setVerificationEmail] = useState('');
+  const [verificationCode, setVerificationCode] = useState('');
+  const [isVerifyingCode, setIsVerifyingCode] = useState(false);
+  const [verificationSuccess, setVerificationSuccess] = useState(false);
+  const [verificationError, setVerificationError] = useState(null);
+  const [verificationCooldown, setVerificationCooldown] = useState(0);
+  const [resendStatus, setResendStatus] = useState(null);
+  const [isResendingCode, setIsResendingCode] = useState(false);
 
   // --- Frontend-Only Forgot Password State ---
   const [forgotEmail, setForgotEmail] = useState('');
   const [forgotError, setForgotError] = useState(null);
   const [isSendingForgot, setIsSendingForgot] = useState(false);
   const [forgotSuccess, setForgotSuccess] = useState(false);
+
+  // Check URL query parameters on mount (supports email link verification inside the sign in window)
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const params = new URLSearchParams(window.location.search);
+      const token = params.get('token');
+      const email = params.get('email');
+      const code = params.get('code');
+      const verify = params.get('verify');
+
+      if (email) {
+        setVerificationEmail(email);
+        setLoginEmail(email);
+      }
+      if (code) {
+        setVerificationCode(code);
+      }
+      if (token || verify || code || initialTab === 'verify-email') {
+        setActiveTab('verify-email');
+      }
+
+      if (token) {
+        setIsVerifyingCode(true);
+        setVerificationError(null);
+        apiClient
+          .get(`/auth/verify-email?token=${encodeURIComponent(token)}`)
+          .then(() => {
+            setVerificationSuccess(true);
+            if (refreshUser) refreshUser();
+            if (window.history?.replaceState) {
+              window.history.replaceState({}, document.title, window.location.pathname);
+            }
+          })
+          .catch((err) => {
+            setVerificationError(
+              err.message || 'Verification link is invalid, expired, or has already been used.'
+            );
+          })
+          .finally(() => {
+            setIsVerifyingCode(false);
+          });
+      }
+    }
+  }, [initialTab, refreshUser]);
+
+  // Cooldown ticker for verification resend
+  useEffect(() => {
+    if (verificationCooldown <= 0) return;
+    const interval = setInterval(() => {
+      setVerificationCooldown((prev) => (prev > 0 ? prev - 1 : 0));
+    }, 1000);
+    return () => clearInterval(interval);
+  }, [verificationCooldown]);
 
   // Sign In Handler
   const handleLoginSubmit = async (e) => {
@@ -67,14 +131,21 @@ export function AuthCard({ initialTab = 'login' }) {
     try {
       const loggedUser = await login(loginEmail, loginPassword);
 
-      // Determine destination based on role (ADMIN -> /admin, Job Seeker / CANDIDATE -> /jobs)
-      let target = loggedUser?.role === 'ADMIN' ? '/admin' : '/jobs';
+      // If user is unverified, prompt verification inside the window
+      if (loggedUser && !loggedUser.isEmailVerified) {
+        setVerificationEmail(loginEmail);
+        setVerificationCode('');
+        setVerificationError(null);
+        setVerificationSuccess(false);
+        setActiveTab('verify-email');
+        return;
+      }
 
+      let target = loggedUser?.role === 'ADMIN' ? '/admin' : '/jobs';
       if (typeof window !== 'undefined') {
         const params = new URLSearchParams(window.location.search);
         const returnUrl = params.get('returnUrl');
         if (returnUrl && returnUrl.startsWith('/') && !returnUrl.startsWith('//')) {
-          // If non-admin attempts to access admin route via returnUrl, divert to /jobs
           if (returnUrl.startsWith('/admin') && loggedUser?.role !== 'ADMIN') {
             target = '/jobs';
           } else {
@@ -94,7 +165,7 @@ export function AuthCard({ initialTab = 'login' }) {
     }
   };
 
-  // Register Handler
+  // Register Handler: immediately switches this window to Verification Menu
   const handleRegisterSubmit = async (e) => {
     e.preventDefault();
     setRegSubmitError(null);
@@ -130,7 +201,15 @@ export function AuthCard({ initialTab = 'login' }) {
         lastName: regForm.lastName.trim() || undefined,
         role: regForm.role,
       });
-      setRegSuccess(true);
+
+      // Switch to Verification Menu inside this same sign in window
+      setJustRegistered(true);
+      setVerificationEmail(regForm.email);
+      setVerificationCode('');
+      setVerificationSuccess(false);
+      setVerificationError(null);
+      setVerificationCooldown(60);
+      setActiveTab('verify-email');
     } catch (err) {
       setRegSubmitError(err.message || 'Registration failed. Email may already be in use.');
       if (err?.fieldErrors && Object.keys(err.fieldErrors).length > 0) {
@@ -138,6 +217,68 @@ export function AuthCard({ initialTab = 'login' }) {
       }
     } finally {
       setIsRegistering(false);
+    }
+  };
+
+  // 6-digit Code Verification Handler
+  const handleVerifyCodeSubmit = async (e) => {
+    e?.preventDefault?.();
+    setVerificationError(null);
+    const cleanedCode = verificationCode.trim();
+
+    if (!cleanedCode || cleanedCode.length < 6) {
+      setVerificationError('Please enter the full 6-digit verification code.');
+      return;
+    }
+
+    setIsVerifyingCode(true);
+    try {
+      await apiClient.post('/auth/verify-email', {
+        code: cleanedCode,
+        email: verificationEmail.trim() || undefined,
+      });
+
+      setVerificationSuccess(true);
+      if (refreshUser) {
+        await refreshUser();
+      }
+
+      setTimeout(() => {
+        const dest = user?.role === 'ADMIN' ? '/admin' : '/jobs';
+        router.push(dest);
+      }, 1500);
+    } catch (err) {
+      setVerificationError(err.message || 'Invalid or expired verification code.');
+    } finally {
+      setIsVerifyingCode(false);
+    }
+  };
+
+  // Resend Verification Code Handler
+  const handleResendVerificationCode = async (e) => {
+    e?.preventDefault?.();
+    const targetEmail = verificationEmail.trim() || regForm.email.trim() || user?.email;
+    if (!targetEmail || verificationCooldown > 0) return;
+
+    setIsResendingCode(true);
+    setResendStatus(null);
+    try {
+      const res = await apiClient.post('/auth/resend-verification', {
+        email: targetEmail,
+      });
+      setResendStatus({
+        type: 'success',
+        message: res.message || 'A new 6-digit verification code has been dispatched to your email.',
+      });
+      setVerificationCooldown(res.cooldownSeconds || 60);
+    } catch (err) {
+      setResendStatus({
+        type: 'info',
+        message: err.message || 'If an account exists, a new code has been sent.',
+      });
+      setVerificationCooldown(60);
+    } finally {
+      setIsResendingCode(false);
     }
   };
 
@@ -158,26 +299,13 @@ export function AuthCard({ initialTab = 'login' }) {
     }, 600);
   };
 
-  // Calculate slide offset percentage
-  const getSlideOffset = () => {
-    switch (activeTab) {
-      case 'register':
-        return '-100%';
-      case 'forgot-password':
-        return '-200%';
-      case 'login':
-      default:
-        return '0%';
-    }
-  };
-
-  // If already authenticated, show friendly profile card
-  if (isAuthenticated && !authLoading && user) {
+  // If already authenticated and email is verified, show friendly profile card
+  if (isAuthenticated && !authLoading && user && user.isEmailVerified && !justRegistered && activeTab !== 'verify-email') {
     const fullName = [user.firstName, user.lastName].filter(Boolean).join(' ') || 'User';
     const initial = (user.firstName || user.email).charAt(0).toUpperCase();
     const isAdmin = user.role === 'ADMIN';
-    const dashboardHref = isAdmin ? '/admin' : '/profile';
-    const dashboardLabel = isAdmin ? 'Go to Admin Console' : 'Go to Profile & Dashboard';
+    const dashboardHref = isAdmin ? '/admin' : '/jobs';
+    const dashboardLabel = isAdmin ? 'Go to Admin Console' : 'Go to Job Opportunities';
 
     return (
       <div className="w-full bg-white border border-stormy-border rounded-2xl p-6 sm:p-8 shadow-card space-y-6">
@@ -202,12 +330,10 @@ export function AuthCard({ initialTab = 'login' }) {
           </div>
         </div>
 
-        <Alert variant={user.isEmailVerified ? 'success' : 'warning'}>
-          {user.isEmailVerified
-            ? (isAdmin
-                ? 'Your administrator credentials are confirmed. You have full access to platform governance and controls.'
-                : 'Your account is verified and active. You have full access to personalized job matching.')
-            : 'Email verification is pending. Please verify your email to unlock all platform features.'}
+        <Alert variant="success">
+          {isAdmin
+            ? 'Your administrator credentials are confirmed. You have full access to platform governance and controls.'
+            : 'Your account is verified and active. You have full access to personalized job matching.'}
         </Alert>
 
         <div className="space-y-3 pt-2">
@@ -226,9 +352,35 @@ export function AuthCard({ initialTab = 'login' }) {
 
   return (
     <div className="w-full bg-white border border-stormy-border rounded-2xl shadow-card overflow-hidden">
-      {/* Top Header & Tab Controls */}
+      {/* Top Header & Navigation */}
       <div className="px-6 pt-6 pb-2 border-b border-stormy-border/60 bg-stormy-canvas/40">
-        {activeTab === 'forgot-password' ? (
+        {activeTab === 'verify-email' ? (
+          <div className="flex items-center justify-between pb-2">
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={() => {
+                  setActiveTab('login');
+                  setJustRegistered(false);
+                  setVerificationError(null);
+                  setVerificationSuccess(false);
+                }}
+                className="p-1 -ml-1 text-stormy-muted hover:text-stormy-dark rounded-md transition-colors cursor-pointer"
+                aria-label="Back to sign in"
+              >
+                <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+                </svg>
+              </button>
+              <span className="text-sm font-semibold text-stormy-main">
+                Email Verification
+              </span>
+            </div>
+            <span className="text-[11px] font-semibold px-2.5 py-0.5 rounded-full bg-blue-50 text-blue-700 border border-blue-200">
+              Verify Account
+            </span>
+          </div>
+        ) : activeTab === 'forgot-password' ? (
           <div className="flex items-center gap-2 pb-2">
             <button
               type="button"
@@ -249,7 +401,6 @@ export function AuthCard({ initialTab = 'login' }) {
           </div>
         ) : (
           <div className="relative flex bg-stormy-canvas p-1 rounded-xl border border-stormy-border">
-            {/* Sliding Pill Indicator */}
             <div
               className="absolute top-1 bottom-1 rounded-lg bg-white shadow-subtle border border-stormy-border/70 transition-all duration-300 ease-in-out"
               style={{
@@ -260,10 +411,7 @@ export function AuthCard({ initialTab = 'login' }) {
 
             <button
               type="button"
-              onClick={() => {
-                setActiveTab('login');
-                setRegSuccess(false);
-              }}
+              onClick={() => setActiveTab('login')}
               className={`relative z-10 flex-1 py-2 text-xs font-semibold rounded-lg text-center transition-colors cursor-pointer ${
                 activeTab === 'login'
                   ? 'text-stormy-dark'
@@ -274,10 +422,7 @@ export function AuthCard({ initialTab = 'login' }) {
             </button>
             <button
               type="button"
-              onClick={() => {
-                setActiveTab('register');
-                setRegSuccess(false);
-              }}
+              onClick={() => setActiveTab('register')}
               className={`relative z-10 flex-1 py-2 text-xs font-semibold rounded-lg text-center transition-colors cursor-pointer ${
                 activeTab === 'register'
                   ? 'text-stormy-dark'
@@ -290,16 +435,188 @@ export function AuthCard({ initialTab = 'login' }) {
         )}
       </div>
 
-      {/* Horizontal Sliding Window */}
-      <div className="relative overflow-hidden w-full">
-        <div
-          className="flex transition-transform duration-300 ease-in-out items-start"
-          style={{ transform: `translateX(${getSlideOffset()})` }}
-        >
-          {/* ==================================================== */}
-          {/* SLIDE 1: SIGN IN                                     */}
-          {/* ==================================================== */}
-          <div className="w-full flex-shrink-0 p-6 sm:p-7 space-y-5">
+      {/* Main Content Area: directly displays whichever view is active */}
+      <div className="w-full">
+        {/* ==================================================== */}
+        {/* 1. VERIFICATION VIEW (Active on register or verify)   */}
+        {/* ==================================================== */}
+        {activeTab === 'verify-email' && (
+          <div className="p-6 sm:p-7 space-y-4 animate-in fade-in duration-200">
+            <div>
+              <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-md text-[11px] font-semibold bg-blue-50 text-blue-700 border border-blue-200 mb-2">
+                <span className="w-1.5 h-1.5 rounded-full bg-blue-600 animate-pulse" />
+                Step 2: Account Activation
+              </div>
+              <h3 className="text-xl font-bold text-stormy-main tracking-tight">
+                Verify your email address
+              </h3>
+              <p className="text-xs text-stormy-muted mt-1">
+                We sent a 6-digit confirmation code to{' '}
+                <strong className="text-stormy-main font-semibold">
+                  {verificationEmail || 'your email'}
+                </strong>
+                .
+              </p>
+            </div>
+
+            {isVerifyingCode && !verificationCode ? (
+              <div className="text-center py-8 space-y-3">
+                <div className="w-8 h-8 border-3 border-stormy-sky border-t-transparent rounded-full animate-spin mx-auto" />
+                <p className="text-sm font-semibold text-stormy-main">Confirming verification link...</p>
+                <p className="text-xs text-stormy-muted">Please wait while we activate your account.</p>
+              </div>
+            ) : verificationSuccess ? (
+              <div className="space-y-4 text-center py-4">
+                <div className="w-12 h-12 bg-feedback-success-bg border border-feedback-success-border rounded-full flex items-center justify-center mx-auto text-feedback-success">
+                  <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 13l4 4L19 7" />
+                  </svg>
+                </div>
+
+                <div>
+                  <h4 className="text-base font-bold text-stormy-main">Email Successfully Verified!</h4>
+                  <p className="mt-1 text-xs text-stormy-muted">
+                    Your profile strength has received a <strong className="text-emerald-600 font-bold">+2.5%</strong> boost.
+                  </p>
+                </div>
+
+                <div className="space-y-2 pt-2">
+                  <Button
+                    variant="primary"
+                    size="md"
+                    className="w-full"
+                    onClick={() => {
+                      const dest = user?.role === 'ADMIN' ? '/admin' : '/jobs';
+                      router.push(dest);
+                    }}
+                  >
+                    Continue to Dashboard &rarr;
+                  </Button>
+                </div>
+              </div>
+            ) : (
+              <form onSubmit={handleVerifyCodeSubmit} noValidate className="space-y-4">
+                {verificationError && (
+                  <Alert variant="danger" title="Verification error">
+                    {verificationError}
+                  </Alert>
+                )}
+
+                {resendStatus && (
+                  <Alert variant={resendStatus.type}>
+                    {resendStatus.message}
+                  </Alert>
+                )}
+
+                {!verificationEmail ? (
+                  <Input
+                    label="Account Email Address"
+                    id="verification-email-input"
+                    type="email"
+                    placeholder="name@example.com"
+                    value={verificationEmail}
+                    onChange={(e) => setVerificationEmail(e.target.value)}
+                    required
+                  />
+                ) : (
+                  <div className="flex items-center justify-between px-3 py-2 bg-stormy-mist/20 rounded-xl border border-stormy-border/60 text-xs">
+                    <div className="truncate">
+                      <span className="text-stormy-muted">Target email: </span>
+                      <strong className="text-stormy-main font-semibold">{verificationEmail}</strong>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => setVerificationEmail('')}
+                      className="text-stormy-sky hover:text-stormy-skyHover text-[11px] font-semibold underline shrink-0 ml-2 cursor-pointer"
+                    >
+                      Change
+                    </button>
+                  </div>
+                )}
+
+                <div>
+                  <div className="flex items-center justify-between mb-1.5">
+                    <label className="block text-xs font-semibold text-stormy-dark">
+                      Enter 6-Digit Code
+                    </label>
+                  </div>
+                  <input
+                    type="text"
+                    inputMode="numeric"
+                    maxLength={6}
+                    placeholder="123456"
+                    value={verificationCode}
+                    onChange={(e) => {
+                      setVerificationCode(e.target.value.replace(/\D/g, '').slice(0, 6));
+                      if (verificationError) setVerificationError(null);
+                    }}
+                    className="w-full text-center tracking-[0.4em] font-mono text-2xl font-bold py-2.5 px-3 border border-stormy-border rounded-xl focus:outline-none focus:ring-2 focus:ring-stormy-sky focus:border-stormy-sky shadow-subtle text-stormy-main bg-white"
+                    required
+                    autoFocus
+                    disabled={isVerifyingCode}
+                  />
+                  <p className="text-[11px] text-stormy-muted mt-1.5 text-center">
+                    Enter the code from the email or click the link in your inbox.
+                  </p>
+                </div>
+
+                <Button
+                  type="submit"
+                  variant="primary"
+                  size="md"
+                  className="w-full"
+                  loading={isVerifyingCode}
+                  disabled={isVerifyingCode || verificationCode.length < 6}
+                >
+                  Verify Email Code
+                </Button>
+
+                <div className="pt-3 border-t border-stormy-border flex items-center justify-between text-xs">
+                  <span className="text-stormy-muted">Didn&apos;t receive it?</span>
+                  <button
+                    type="button"
+                    onClick={handleResendVerificationCode}
+                    disabled={verificationCooldown > 0 || isResendingCode || !verificationEmail}
+                    className="font-semibold text-stormy-sky hover:text-stormy-skyHover disabled:text-stormy-muted underline cursor-pointer"
+                  >
+                    {verificationCooldown > 0
+                      ? `Resend in ${verificationCooldown}s`
+                      : 'Resend Email Code'}
+                  </button>
+                </div>
+
+                <div className="pt-2 text-center text-xs space-y-1.5">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const dest = user?.role === 'ADMIN' ? '/admin' : '/jobs';
+                      router.push(dest);
+                    }}
+                    className="text-stormy-muted hover:text-stormy-dark transition-colors cursor-pointer block w-full text-center"
+                  >
+                    Skip for now &amp; browse jobs &rarr;
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setActiveTab('login');
+                      setJustRegistered(false);
+                    }}
+                    className="text-stormy-muted hover:text-stormy-dark underline cursor-pointer block w-full text-center"
+                  >
+                    Return to Sign In
+                  </button>
+                </div>
+              </form>
+            )}
+          </div>
+        )}
+
+        {/* ==================================================== */}
+        {/* 2. SIGN IN VIEW                                      */}
+        {/* ==================================================== */}
+        {activeTab === 'login' && (
+          <div className="p-6 sm:p-7 space-y-5 animate-in fade-in duration-200">
             <div>
               <h3 className="text-xl font-bold text-stormy-main tracking-tight">
                 Sign in to your account
@@ -348,11 +665,24 @@ export function AuthCard({ initialTab = 'login' }) {
                   autoComplete="current-password"
                   disabled={isLoggingIn}
                 />
-                <div className="flex justify-end mt-1.5">
+                <div className="flex items-center justify-between mt-1.5 text-xs">
                   <button
                     type="button"
-                    onClick={() => setActiveTab('forgot-password')}
-                    className="text-xs font-medium text-stormy-slate hover:text-stormy-dark transition-colors cursor-pointer"
+                    onClick={() => {
+                      setVerificationEmail(loginEmail || '');
+                      setActiveTab('verify-email');
+                    }}
+                    className="font-medium text-stormy-sky hover:text-stormy-skyHover transition-colors cursor-pointer"
+                  >
+                    Verify email with code
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setForgotEmail(loginEmail || '');
+                      setActiveTab('forgot-password');
+                    }}
+                    className="font-medium text-stormy-slate hover:text-stormy-dark transition-colors cursor-pointer"
                   >
                     Forgot password?
                   </button>
@@ -382,186 +712,158 @@ export function AuthCard({ initialTab = 'login' }) {
               </button>
             </div>
           </div>
+        )}
 
-          {/* ==================================================== */}
-          {/* SLIDE 2: CREATE ACCOUNT                              */}
-          {/* ==================================================== */}
-          <div className="w-full flex-shrink-0 p-6 sm:p-7 space-y-4">
-            {regSuccess ? (
-              <div className="space-y-4 text-center py-4">
-                <div className="w-12 h-12 bg-feedback-success-bg border border-feedback-success-border rounded-full flex items-center justify-center mx-auto text-feedback-success">
-                  <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                  </svg>
-                </div>
-                <div>
-                  <h3 className="text-lg font-bold text-stormy-main">Account Registered!</h3>
-                  <p className="mt-1 text-xs text-stormy-muted">
-                    Confirmation sent to <strong className="text-stormy-main">{regForm.email}</strong>.
-                  </p>
-                </div>
-                <Alert variant="info" title="Verification Notice">
-                  Please verify your email to unlock personalized job recommendations and CV uploads.
-                </Alert>
-                <Button
-                  variant="primary"
-                  size="md"
-                  className="w-full"
-                  onClick={() => {
-                    setRegSuccess(false);
-                    setActiveTab('login');
-                  }}
-                >
-                  Continue to Sign In
-                </Button>
-              </div>
-            ) : (
-              <>
-                <div>
-                  <h3 className="text-xl font-bold text-stormy-main tracking-tight">
-                    Create an account
-                  </h3>
-                  <p className="text-xs text-stormy-muted mt-1">
-                    Free access across 50+ aggregated boards.
-                  </p>
-                </div>
+        {/* ==================================================== */}
+        {/* 3. CREATE ACCOUNT VIEW                               */}
+        {/* ==================================================== */}
+        {activeTab === 'register' && (
+          <div className="p-6 sm:p-7 space-y-4 animate-in fade-in duration-200">
+            <div>
+              <h3 className="text-xl font-bold text-stormy-main tracking-tight">
+                Create an account
+              </h3>
+              <p className="text-xs text-stormy-muted mt-1">
+                Free access across 50+ aggregated boards.
+              </p>
+            </div>
 
-                {regSubmitError && (
-                  <Alert variant="danger" title="Registration failed">
-                    {regSubmitError}
-                  </Alert>
-                )}
-
-                <form onSubmit={handleRegisterSubmit} noValidate className="space-y-3">
-                  {/* Role Selector */}
-                  <div className="grid grid-cols-2 gap-2">
-                    <button
-                      type="button"
-                      onClick={() => setRegForm((p) => ({ ...p, role: 'CANDIDATE' }))}
-                      className={`py-1.5 px-3 text-xs font-semibold rounded-lg border text-center transition-all cursor-pointer ${
-                        regForm.role === 'CANDIDATE'
-                          ? 'bg-stormy-dark text-white border-stormy-dark shadow-subtle'
-                          : 'bg-white text-stormy-muted border-stormy-border hover:bg-stormy-canvas'
-                      }`}
-                    >
-                      Job Seeker
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => setRegForm((p) => ({ ...p, role: 'EMPLOYER' }))}
-                      className={`py-1.5 px-3 text-xs font-semibold rounded-lg border text-center transition-all cursor-pointer ${
-                        regForm.role === 'EMPLOYER'
-                          ? 'bg-stormy-dark text-white border-stormy-dark shadow-subtle'
-                          : 'bg-white text-stormy-muted border-stormy-border hover:bg-stormy-canvas'
-                      }`}
-                    >
-                      Employer
-                    </button>
-                  </div>
-
-                  <div className="grid grid-cols-2 gap-2">
-                    <Input
-                      label="First name"
-                      id="home-reg-first"
-                      type="text"
-                      placeholder="Jane"
-                      value={regForm.firstName}
-                      onChange={(e) => setRegForm((p) => ({ ...p, firstName: e.target.value }))}
-                      disabled={isRegistering}
-                    />
-                    <Input
-                      label="Last name"
-                      id="home-reg-last"
-                      type="text"
-                      placeholder="Doe"
-                      value={regForm.lastName}
-                      onChange={(e) => setRegForm((p) => ({ ...p, lastName: e.target.value }))}
-                      disabled={isRegistering}
-                    />
-                  </div>
-
-                  <Input
-                    label="Email address"
-                    id="home-reg-email"
-                    type="email"
-                    placeholder="you@example.com"
-                    value={regForm.email}
-                    onChange={(e) => {
-                      setRegForm((p) => ({ ...p, email: e.target.value }));
-                      if (regErrors.email) setRegErrors((p) => ({ ...p, email: null }));
-                    }}
-                    error={regErrors.email}
-                    required
-                    autoComplete="email"
-                    disabled={isRegistering}
-                  />
-
-                  <Input
-                    label="Password"
-                    id="home-reg-password"
-                    type="password"
-                    placeholder="At least 8 characters"
-                    value={regForm.password}
-                    onChange={(e) => {
-                      setRegForm((p) => ({ ...p, password: e.target.value }));
-                      if (regErrors.password) setRegErrors((p) => ({ ...p, password: null }));
-                    }}
-                    error={regErrors.password}
-                    required
-                    autoComplete="new-password"
-                    disabled={isRegistering}
-                  />
-
-                  <Input
-                    label="Confirm password"
-                    id="home-reg-confirm"
-                    type="password"
-                    placeholder="Repeat password"
-                    value={regForm.confirmPassword}
-                    onChange={(e) => {
-                      setRegForm((p) => ({ ...p, confirmPassword: e.target.value }));
-                      if (regErrors.confirmPassword) setRegErrors((p) => ({ ...p, confirmPassword: null }));
-                    }}
-                    error={regErrors.confirmPassword}
-                    required
-                    autoComplete="new-password"
-                    disabled={isRegistering}
-                  />
-
-                  <Button
-                    type="submit"
-                    variant="primary"
-                    size="md"
-                    className="w-full mt-1"
-                    loading={isRegistering}
-                    disabled={isRegistering}
-                  >
-                    Create Account
-                  </Button>
-                </form>
-
-                <div className="text-center text-xs text-stormy-muted pt-2 border-t border-stormy-border">
-                  Already have an account?{' '}
-                  <button
-                    type="button"
-                    onClick={() => setActiveTab('login')}
-                    className="font-semibold text-stormy-dark hover:text-stormy-sky transition-colors cursor-pointer underline"
-                  >
-                    Sign in
-                  </button>
-                </div>
-              </>
+            {regSubmitError && (
+              <Alert variant="danger" title="Registration failed">
+                {regSubmitError}
+              </Alert>
             )}
-          </div>
 
-          {/* ==================================================== */}
-          {/* SLIDE 3: FRONTEND-ONLY FORGOT PASSWORD UI            */}
-          {/* ==================================================== */}
-          <div className="w-full flex-shrink-0 p-6 sm:p-7 space-y-5">
+            <form onSubmit={handleRegisterSubmit} noValidate className="space-y-3">
+              {/* Role Selector */}
+              <div className="grid grid-cols-2 gap-2">
+                <button
+                  type="button"
+                  onClick={() => setRegForm((p) => ({ ...p, role: 'CANDIDATE' }))}
+                  className={`py-1.5 px-3 text-xs font-semibold rounded-lg border text-center transition-all cursor-pointer ${
+                    regForm.role === 'CANDIDATE'
+                      ? 'bg-stormy-dark text-white border-stormy-dark shadow-subtle'
+                      : 'bg-white text-stormy-muted border-stormy-border hover:bg-stormy-canvas'
+                  }`}
+                >
+                  Job Seeker
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setRegForm((p) => ({ ...p, role: 'EMPLOYER' }))}
+                  className={`py-1.5 px-3 text-xs font-semibold rounded-lg border text-center transition-all cursor-pointer ${
+                    regForm.role === 'EMPLOYER'
+                      ? 'bg-stormy-dark text-white border-stormy-dark shadow-subtle'
+                      : 'bg-white text-stormy-muted border-stormy-border hover:bg-stormy-canvas'
+                  }`}
+                >
+                  Employer
+                </button>
+              </div>
+
+              <div className="grid grid-cols-2 gap-2">
+                <Input
+                  label="First name"
+                  id="home-reg-first"
+                  type="text"
+                  placeholder="Jane"
+                  value={regForm.firstName}
+                  onChange={(e) => setRegForm((p) => ({ ...p, firstName: e.target.value }))}
+                  disabled={isRegistering}
+                />
+                <Input
+                  label="Last name"
+                  id="home-reg-last"
+                  type="text"
+                  placeholder="Doe"
+                  value={regForm.lastName}
+                  onChange={(e) => setRegForm((p) => ({ ...p, lastName: e.target.value }))}
+                  disabled={isRegistering}
+                />
+              </div>
+
+              <Input
+                label="Email address"
+                id="home-reg-email"
+                type="email"
+                placeholder="you@example.com"
+                value={regForm.email}
+                onChange={(e) => {
+                  setRegForm((p) => ({ ...p, email: e.target.value }));
+                  if (regErrors.email) setRegErrors((p) => ({ ...p, email: null }));
+                }}
+                error={regErrors.email}
+                required
+                autoComplete="email"
+                disabled={isRegistering}
+              />
+
+              <Input
+                label="Password"
+                id="home-reg-password"
+                type="password"
+                placeholder="At least 8 characters"
+                value={regForm.password}
+                onChange={(e) => {
+                  setRegForm((p) => ({ ...p, password: e.target.value }));
+                  if (regErrors.password) setRegErrors((p) => ({ ...p, password: null }));
+                }}
+                error={regErrors.password}
+                required
+                autoComplete="new-password"
+                disabled={isRegistering}
+              />
+
+              <Input
+                label="Confirm password"
+                id="home-reg-confirm"
+                type="password"
+                placeholder="Repeat password"
+                value={regForm.confirmPassword}
+                onChange={(e) => {
+                  setRegForm((p) => ({ ...p, confirmPassword: e.target.value }));
+                  if (regErrors.confirmPassword) setRegErrors((p) => ({ ...p, confirmPassword: null }));
+                }}
+                error={regErrors.confirmPassword}
+                required
+                autoComplete="new-password"
+                disabled={isRegistering}
+              />
+
+              <Button
+                type="submit"
+                variant="primary"
+                size="md"
+                className="w-full mt-1"
+                loading={isRegistering}
+                disabled={isRegistering}
+              >
+                Create Account
+              </Button>
+            </form>
+
+            <div className="text-center text-xs text-stormy-muted pt-2 border-t border-stormy-border">
+              Already have an account?{' '}
+              <button
+                type="button"
+                onClick={() => setActiveTab('login')}
+                className="font-semibold text-stormy-dark hover:text-stormy-sky transition-colors cursor-pointer underline"
+              >
+                Sign in
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* ==================================================== */}
+        {/* 4. FORGOT PASSWORD VIEW                              */}
+        {/* ==================================================== */}
+        {activeTab === 'forgot-password' && (
+          <div className="p-6 sm:p-7 space-y-5 animate-in fade-in duration-200">
             <div>
               <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-md text-[11px] font-medium bg-stormy-mist/40 text-stormy-dark border border-stormy-mist mb-2">
                 <span className="w-1.5 h-1.5 rounded-full bg-stormy-slate animate-pulse" />
-                Frontend-Only UI Preview
+                Password Recovery
               </div>
               <h3 className="text-xl font-bold text-stormy-main tracking-tight">
                 Reset your password
@@ -649,7 +951,7 @@ export function AuthCard({ initialTab = 'login' }) {
               </form>
             )}
           </div>
-        </div>
+        )}
       </div>
 
       {/* Card Footer Security Tagline */}
@@ -659,4 +961,3 @@ export function AuthCard({ initialTab = 'login' }) {
     </div>
   );
 }
-
