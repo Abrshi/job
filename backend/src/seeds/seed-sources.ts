@@ -1,27 +1,52 @@
 import { prisma } from '../lib/prisma';
 import { logger } from '../lib/logger';
 
-export async function seedSources(): Promise<{ created: boolean; slug: string }> {
-  const existing = await prisma.jobSource.findUnique({
+export async function seedSources(): Promise<{ createdCount: number }> {
+  let createdCount = 0;
+
+  // 1. Afriwork
+  const afriworkExisting = await prisma.jobSource.findUnique({
     where: { slug: 'afriwork' },
   });
 
-  if (existing) {
+  if (!afriworkExisting) {
+    await prisma.jobSource.create({
+      data: {
+        name: 'Afriwork',
+        slug: 'afriwork',
+        type: 'API',
+        endpointUrl: 'https://api.afriworket.com/v1/graphql',
+        isActive: false, // Disabled by default until live auth webhook credentials are configured
+        pollingInterval: 60,
+      },
+    });
+    logger.info('Afriwork job source created successfully (disabled by default pending credentials).');
+    createdCount++;
+  } else {
     logger.info('Afriwork job source already exists. Skipping creation.');
-    return { created: false, slug: 'afriwork' };
   }
 
-  await prisma.jobSource.create({
-    data: {
-      name: 'Afriwork',
-      slug: 'afriwork',
-      type: 'API',
-      endpointUrl: 'https://api.afriworket.com/v1/graphql',
-      isActive: false, // Disabled by default until live auth webhook credentials are configured
-      pollingInterval: 60,
-    },
+  // 2. HaHuJobs
+  const hahuExisting = await prisma.jobSource.findUnique({
+    where: { slug: 'hahujobs' },
   });
 
-  logger.info('Afriwork job source created successfully (disabled by default pending credentials).');
-  return { created: true, slug: 'afriwork' };
+  if (!hahuExisting) {
+    await prisma.jobSource.create({
+      data: {
+        name: 'HaHuJobs',
+        slug: 'hahujobs',
+        type: 'API',
+        endpointUrl: 'https://graph.aggregator.hahu.jobs/v1/graphql',
+        isActive: false, // Disabled by default pending official permission verification
+        pollingInterval: 120, // 2 hours
+      },
+    });
+    logger.info('HaHuJobs source created successfully (disabled by default pending confirmation).');
+    createdCount++;
+  } else {
+    logger.info('HaHuJobs source already exists. Skipping creation.');
+  }
+
+  return { createdCount };
 }

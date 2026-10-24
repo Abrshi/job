@@ -2,7 +2,12 @@ import crypto from 'crypto';
 
 export function normalizeUrl(rawUrl: string): string {
   try {
-    const parsed = new URL(rawUrl.trim());
+    const trimmed = rawUrl.trim();
+    if (trimmed.startsWith('mailto:') || trimmed.startsWith('tel:')) {
+      return trimmed;
+    }
+
+    const parsed = new URL(trimmed);
     parsed.hash = '';
 
     // Strip common tracking parameters

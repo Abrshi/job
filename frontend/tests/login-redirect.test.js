@@ -3,12 +3,12 @@ import assert from 'node:assert';
 
 // Redirection resolution helper reflecting the logic in AuthCard & universal dashboard
 function resolveLoginRedirect(user, returnUrlParam) {
-  let target = user?.role === 'ADMIN' ? '/admin' : '/profile';
+  let target = user?.role === 'ADMIN' ? '/admin' : '/jobs';
 
   if (returnUrlParam && typeof returnUrlParam === 'string') {
     if (returnUrlParam.startsWith('/') && !returnUrlParam.startsWith('//')) {
       if (returnUrlParam.startsWith('/admin') && user?.role !== 'ADMIN') {
-        target = '/profile';
+        target = '/jobs';
       } else {
         target = returnUrlParam;
       }
@@ -25,22 +25,22 @@ describe('Post-Login Dashboard Redirection Logic', () => {
     assert.strictEqual(destination, '/admin');
   });
 
-  it('redirects standard user to /profile by default', () => {
+  it('redirects standard user to /jobs by default', () => {
     const regularUser = { id: 'user-1', email: 'user@job.com', role: 'USER' };
     const destination = resolveLoginRedirect(regularUser, null);
-    assert.strictEqual(destination, '/profile');
+    assert.strictEqual(destination, '/jobs');
   });
 
   it('preserves valid relative returnUrl for standard user', () => {
     const regularUser = { id: 'user-1', email: 'user@job.com', role: 'USER' };
-    const destination = resolveLoginRedirect(regularUser, '/saved-jobs');
-    assert.strictEqual(destination, '/saved-jobs');
+    const destination = resolveLoginRedirect(regularUser, '/jobs/saved');
+    assert.strictEqual(destination, '/jobs/saved');
   });
 
-  it('safeguards against non-admin accessing admin returnUrl and falls back to /profile', () => {
+  it('safeguards against non-admin accessing admin returnUrl and falls back to /jobs', () => {
     const regularUser = { id: 'user-1', email: 'user@job.com', role: 'USER' };
     const destination = resolveLoginRedirect(regularUser, '/admin/users');
-    assert.strictEqual(destination, '/profile');
+    assert.strictEqual(destination, '/jobs');
   });
 
   it('allows administrator to follow admin returnUrl', () => {
@@ -56,6 +56,6 @@ describe('Post-Login Dashboard Redirection Logic', () => {
 
     const regularUser = { id: 'user-1', email: 'user@job.com', role: 'USER' };
     const destinationUser = resolveLoginRedirect(regularUser, '//malicious.com');
-    assert.strictEqual(destinationUser, '/profile');
+    assert.strictEqual(destinationUser, '/jobs');
   });
 });

@@ -33,3 +33,27 @@ export const refreshTokenSchema = z.object({
     .optional(),
 });
 
+export const verifyEmailSchema = z.object({
+  query: z
+    .object({
+      token: z.string().optional(),
+      code: z.string().optional(),
+      email: z.string().optional(),
+    })
+    .optional(),
+  body: z
+    .object({
+      token: z.string().optional(),
+      code: z.string().optional(),
+      email: z.string().optional(),
+    })
+    .optional(),
+});
+
+export const resendVerificationSchema = z.object({
+  body: z.object({
+    email: z.string().email('Valid email address is required'),
+  }),
+});
+
+

@@ -1,6 +1,7 @@
 import { prisma } from '../../lib/prisma';
 import { logger } from '../../lib/logger';
 import { sourcesService, SourcesService } from '../sources/sources.service';
+import { notificationsService } from '../alerts/notifications.service';
 
 export class SourceScheduler {
   private timer: NodeJS.Timeout | null = null;
@@ -90,6 +91,13 @@ export class SourceScheduler {
             this.runningSources.delete(source.id);
           }
         })();
+      }
+
+      // Check and process pending job alerts for active saved searches
+      if (process.env.NODE_ENV !== 'test') {
+        notificationsService.processPendingJobAlerts().catch((alertErr) => {
+          logger.error('Error during scheduled job alert processing:', (alertErr as Error).message);
+        });
       }
     } catch (tickErr) {
       logger.error('Error during scheduler tick:', (tickErr as Error).message);

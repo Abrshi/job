@@ -1,5 +1,6 @@
 import { SourceAdapter } from './source-adapter.interface';
 import { afriworkAdapter } from './afriwork.adapter';
+import { hahuJobsAdapter } from './hahujobs.adapter';
 import { AppError } from '../../../middleware/error-handler';
 
 export class AdapterRegistry {
@@ -7,6 +8,7 @@ export class AdapterRegistry {
 
   constructor() {
     this.register(afriworkAdapter);
+    this.register(hahuJobsAdapter);
   }
 
   register(adapter: SourceAdapter): void {

@@ -5,12 +5,14 @@ export class AuthRepository {
   async findByEmail(email: string) {
     return prisma.user.findUnique({
       where: { email },
+      include: { profile: { select: { avatarUrl: true } } },
     });
   }
 
   async findById(id: string) {
     return prisma.user.findUnique({
       where: { id },
+      include: { profile: { select: { avatarUrl: true } } },
     });
   }
 

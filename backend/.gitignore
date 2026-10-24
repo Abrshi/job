@@ -27,3 +27,6 @@ Thumbs.db
 .mariadb.pid
 *.sock
 
+# Local file uploads
+uploads/
+

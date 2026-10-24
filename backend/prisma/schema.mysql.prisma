@@ -79,6 +79,101 @@ enum RunStatus {
   FAILED
 }
 
+enum ApplicationMethod {
+  EXTERNAL
+  INTERNAL
+  BOTH
+}
+
+enum ApplicationStatus {
+  DRAFT
+  APPLIED
+  IN_REVIEW
+  INTERVIEW
+  OFFER
+  REJECTED
+  WITHDRAWN
+}
+
+enum ApplicationSource {
+  PLATFORM
+  EXTERNAL
+}
+
+enum InterviewType {
+  PHONE
+  VIDEO
+  IN_PERSON
+  TAKE_HOME
+  OTHER
+}
+
+enum InterviewOutcome {
+  PENDING
+  PASSED
+  FAILED
+  CANCELLED
+}
+
+enum DocumentType {
+  CV
+  RESUME
+  COVER_LETTER
+  CERTIFICATE
+  OTHER
+}
+
+enum DocumentProcessingStatus {
+  PENDING
+  PROCESSING
+  COMPLETED
+  FAILED
+}
+
+enum DocumentExtractionStatus {
+  NOT_EXTRACTED
+  EXTRACTING
+  EXTRACTED
+  FAILED
+}
+
+enum DataProvenance {
+  MANUAL
+  CV_EXTRACTED
+  IMPORTED
+}
+
+enum NotificationChannel {
+  IN_APP
+  EMAIL
+}
+
+enum NotificationDeliveryStatus {
+  PENDING
+  DELIVERED
+  FAILED
+  SKIPPED
+}
+
+enum GeneratedDocumentType {
+  TAILORED_CV
+  COVER_LETTER
+  APPLICATION_EMAIL
+}
+
+enum GenerationStatus {
+  DRAFT
+  GENERATING
+  COMPLETED
+  FAILED
+}
+
+enum VerificationType {
+  EMAIL_VERIFICATION
+  PHONE_VERIFICATION
+  PASSWORD_RESET
+}
+
 model User {
   id              String           @id @default(uuid())
   email           String           @unique
@@ -89,9 +184,18 @@ model User {
   isActive        Boolean          @default(true)
   lastLoginAt     DateTime?
   isEmailVerified Boolean          @default(false)
+  emailVerifiedAt DateTime?
   createdAt       DateTime         @default(now())
   updatedAt       DateTime         @updatedAt
   refreshSessions RefreshSession[]
+  profile         UserProfile?
+  savedJobs       SavedJob[]
+  applications    JobApplication[]
+  documents       UserDocument[]
+  savedSearches   SavedSearch[]
+  notifications   JobNotification[]
+  generatedDocuments GeneratedDocument[]
+  verificationCodes  VerificationCode[]
 
   @@map("users")
 }
@@ -179,9 +283,14 @@ model Job {
   category                 JobCategory?          @relation(fields: [categoryId], references: [id], onDelete: SetNull)
   classificationStatus     ClassificationStatus  @default(PENDING)
   classificationConfidence Decimal?              @db.Decimal(4, 3)
+  applicationMethod        ApplicationMethod     @default(EXTERNAL)
   createdAt                DateTime              @default(now())
   updatedAt                DateTime              @updatedAt
   classifications          JobClassification[]
+  savedBy                  SavedJob[]
+  applications             JobApplication[]
+  notifications            JobNotification[]
+  generatedDocuments       GeneratedDocument[]
 
   @@unique([sourceId, fingerprint])
   @@index([sourceId])
@@ -265,3 +374,487 @@ model AdminAuditLog {
   @@index([targetType])
   @@map("admin_audit_logs")
 }
+
+model UserProfile {
+  id                       String           @id @default(uuid())
+  userId                   String           @unique
+  user                     User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  displayName              String?
+  preferredName            String?
+  headline                 String?
+  avatarUrl                String?          @db.VarChar(255)
+  avatarFileId             String?          @db.VarChar(255)
+  phoneNumber              String?
+  isPhoneVerified          Boolean          @default(false)
+  phoneVerifiedAt          DateTime?
+  professionalEmail        String?
+  country                  String?
+  city                     String?
+  summary                  String?          @db.Text
+  linkedInUrl              String?
+  githubUrl                String?
+  portfolioUrl             String?
+  otherLinks               Json?
+  preferredWorkArrangement WorkArrangement?
+  preferredEmploymentType  EmploymentType?
+  preferredExperienceLevel ExperienceLevel?
+  minSalary                Decimal?         @db.Decimal(12, 2)
+  maxSalary                Decimal?         @db.Decimal(12, 2)
+  salaryCurrency           String?          @default("ETB")
+  preferredJobTitles       Json?
+  preferredCategories      Json?
+  preferredLocations       Json?
+  availability             String?
+  onboardingCompleted      Boolean          @default(false)
+  completionPercentage     Int              @default(0)
+  createdAt                DateTime         @default(now())
+  updatedAt                DateTime         @updatedAt
+
+  experiences              ProfileExperience[]
+  educations               ProfileEducation[]
+  certifications           ProfileCertification[]
+  projects                 ProfileProject[]
+  skills                   ProfileSkill[]
+  languages                ProfileLanguage[]
+  achievements             ProfileAchievement[]
+
+  @@map("user_profiles")
+}
+
+model SavedJob {
+  id        String   @id @default(uuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  jobId     String
+  job       Job      @relation(fields: [jobId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+
+  @@unique([userId, jobId])
+  @@index([userId])
+  @@index([jobId])
+  @@map("saved_jobs")
+}
+
+model JobApplication {
+  id                       String                    @id @default(uuid())
+  userId                   String                    @map("user_id")
+  user                     User                      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  jobId                    String?                   @map("job_id")
+  job                      Job?                      @relation(fields: [jobId], references: [id], onDelete: SetNull)
+  source                   ApplicationSource         @default(PLATFORM)
+  status                   ApplicationStatus         @default(APPLIED)
+  jobTitle                 String                    @map("job_title") @db.VarChar(255)
+  companyName              String                    @map("company_name") @db.VarChar(255)
+  jobUrl                   String?                   @map("job_url") @db.VarChar(1000)
+  location                 String?                   @db.VarChar(255)
+  salary                   String?                   @db.VarChar(100)
+  appliedAt                DateTime?                 @map("applied_at")
+  documentId               String?                   @map("document_id")
+  document                 UserDocument?             @relation("ApplicationCv", fields: [documentId], references: [id], onDelete: SetNull)
+  documentSnapshotFilename String?                   @map("document_snapshot_filename") @db.VarChar(255)
+  documentSnapshotChecksum String?                   @map("document_snapshot_checksum") @db.VarChar(64)
+  coverNote                String?                   @map("cover_note") @db.Text
+  coverLetterDocumentId    String?                   @map("cover_letter_document_id")
+  coverLetterDocument      UserDocument?             @relation("ApplicationCoverLetter", fields: [coverLetterDocumentId], references: [id], onDelete: SetNull)
+  notes                    String?                   @db.Text
+  isArchived               Boolean                   @default(false) @map("is_archived")
+  activeKey                String?                   @unique @map("active_key") @db.VarChar(255)
+  createdAt                DateTime                  @default(now()) @map("created_at")
+  updatedAt                DateTime                  @updatedAt @map("updated_at")
+
+  history                  JobApplicationHistory[]
+  interviews               JobApplicationInterview[]
+  reminders                JobApplicationReminder[]
+  generatedDocuments       GeneratedDocument[]
+
+  @@index([userId])
+  @@index([jobId])
+  @@index([status])
+  @@index([source])
+  @@index([appliedAt])
+  @@index([isArchived])
+  @@map("job_applications")
+}
+
+model JobApplicationHistory {
+  id              String             @id @default(uuid())
+  applicationId   String             @map("application_id")
+  application     JobApplication     @relation(fields: [applicationId], references: [id], onDelete: Cascade)
+  fromStatus      ApplicationStatus? @map("from_status")
+  toStatus        ApplicationStatus  @map("to_status")
+  reason          String?            @map("reason") @db.VarChar(500)
+  changedByUserId String             @map("changed_by_user_id")
+  createdAt       DateTime           @default(now()) @map("created_at")
+
+  @@index([applicationId])
+  @@index([createdAt])
+  @@map("job_application_histories")
+}
+
+model JobApplicationInterview {
+  id               String           @id @default(uuid())
+  applicationId    String           @map("application_id")
+  application      JobApplication   @relation(fields: [applicationId], references: [id], onDelete: Cascade)
+  roundNumber      Int              @default(1) @map("round_number")
+  title            String           @db.VarChar(255)
+  interviewType    InterviewType    @default(VIDEO) @map("interview_type")
+  scheduledAt      DateTime         @map("scheduled_at")
+  timezone         String           @default("UTC") @db.VarChar(100)
+  durationMinutes  Int?             @default(60) @map("duration_minutes")
+  locationUrl      String?          @map("location_url") @db.VarChar(1000)
+  interviewerInfo  String?          @map("interviewer_info") @db.VarChar(500)
+  preparationNotes String?          @map("preparation_notes") @db.Text
+  feedbackNotes    String?          @map("feedback_notes") @db.Text
+  outcome          InterviewOutcome @default(PENDING)
+  createdAt        DateTime         @default(now()) @map("created_at")
+  updatedAt        DateTime         @updatedAt @map("updated_at")
+
+  @@index([applicationId])
+  @@index([scheduledAt])
+  @@index([outcome])
+  @@map("job_application_interviews")
+}
+
+model JobApplicationReminder {
+  id            String         @id @default(uuid())
+  applicationId String         @map("application_id")
+  application   JobApplication @relation(fields: [applicationId], references: [id], onDelete: Cascade)
+  title         String         @db.VarChar(255)
+  remindAt      DateTime       @map("remind_at")
+  isCompleted   Boolean        @default(false) @map("is_completed")
+  completedAt   DateTime?      @map("completed_at")
+  notes         String?        @db.Text
+  createdAt     DateTime       @default(now()) @map("created_at")
+  updatedAt     DateTime       @updatedAt @map("updated_at")
+
+  @@index([applicationId])
+  @@index([remindAt])
+  @@index([isCompleted])
+  @@map("job_application_reminders")
+}
+
+model UserDocument {
+  id                        String                   @id @default(uuid())
+  userId                    String                   @map("user_id")
+  user                      User                     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  driveFileId               String                   @map("drive_file_id")
+  documentType              DocumentType             @default(CV) @map("document_type")
+  originalFilename          String                   @map("original_filename")
+  mimeType                  String                   @map("mime_type")
+  fileSize                  Int                      @map("file_size")
+  fileChecksum              String?                  @map("file_checksum")
+  storageProvider           String                   @default("GOOGLE_DRIVE") @map("storage_provider")
+  processingStatus          DocumentProcessingStatus @default(PENDING) @map("processing_status")
+  extractionStatus          DocumentExtractionStatus @default(NOT_EXTRACTED) @map("extraction_status")
+  extractedText             String?                  @db.LongText @map("extracted_text")
+  extractedData             Json?                    @map("extracted_data")
+  errorMessage              String?                  @db.Text @map("error_message")
+  createdAt                 DateTime                 @default(now()) @map("created_at")
+  updatedAt                 DateTime                 @updatedAt @map("updated_at")
+  applicationsAsCv          JobApplication[]         @relation("ApplicationCv")
+  applicationsAsCoverLetter JobApplication[]         @relation("ApplicationCoverLetter")
+  generatedVersions         GeneratedDocumentVersion[]
+
+  @@index([userId])
+  @@index([documentType])
+  @@index([processingStatus])
+  @@map("user_documents")
+}
+
+model ProfileExperience {
+  id               String          @id @default(uuid())
+  profileId        String          @map("profile_id")
+  profile          UserProfile     @relation(fields: [profileId], references: [id], onDelete: Cascade)
+  companyName      String          @map("company_name")
+  jobTitle         String          @map("job_title")
+  employmentType   EmploymentType? @map("employment_type")
+  location         String?
+  startDate        DateTime?       @map("start_date")
+  endDate          DateTime?       @map("end_date")
+  startYear        Int?            @map("start_year")
+  startMonth       Int?            @map("start_month")
+  endYear          Int?            @map("end_year")
+  endMonth         Int?            @map("end_month")
+  isCurrent        Boolean         @default(false) @map("is_current")
+  description      String?         @db.Text
+  responsibilities Json?
+  achievements     Json?
+  skillsUsed       Json?           @map("skills_used")
+  relevantUrl      String?         @map("relevant_url")
+  provenance       DataProvenance  @default(MANUAL)
+  order            Int             @default(0)
+  createdAt        DateTime        @default(now()) @map("created_at")
+  updatedAt        DateTime        @updatedAt @map("updated_at")
+
+  @@index([profileId])
+  @@map("profile_experiences")
+}
+
+model ProfileEducation {
+  id                 String         @id @default(uuid())
+  profileId          String         @map("profile_id")
+  profile            UserProfile    @relation(fields: [profileId], references: [id], onDelete: Cascade)
+  institution        String
+  degree             String?
+  fieldOfStudy       String?        @map("field_of_study")
+  startDate          DateTime?      @map("start_date")
+  endDate            DateTime?      @map("end_date")
+  startYear          Int?           @map("start_year")
+  startMonth         Int?           @map("start_month")
+  endYear            Int?           @map("end_year")
+  endMonth           Int?           @map("end_month")
+  isCurrent          Boolean        @default(false) @map("is_current")
+  grade              String?
+  description        String?        @db.Text
+  relevantCoursework Json?          @map("relevant_coursework")
+  location           String?
+  provenance         DataProvenance @default(MANUAL)
+  order              Int            @default(0)
+  createdAt          DateTime       @default(now()) @map("created_at")
+  updatedAt          DateTime       @updatedAt @map("updated_at")
+
+  @@index([profileId])
+  @@map("profile_educations")
+}
+
+model ProfileCertification {
+  id                  String         @id @default(uuid())
+  profileId           String         @map("profile_id")
+  profile             UserProfile    @relation(fields: [profileId], references: [id], onDelete: Cascade)
+  name                String
+  issuingOrganization String?        @map("issuing_organization")
+  type                String?        @default("CERTIFICATION")
+  issueDate           DateTime?      @map("issue_date")
+  expiryDate          DateTime?      @map("expiry_date")
+  issueYear           Int?           @map("issue_year")
+  issueMonth          Int?           @map("issue_month")
+  credentialId        String?        @map("credential_id")
+  credentialUrl       String?        @map("credential_url")
+  description         String?        @db.Text
+  provenance          DataProvenance @default(MANUAL)
+  order               Int            @default(0)
+  createdAt           DateTime       @default(now()) @map("created_at")
+  updatedAt           DateTime       @updatedAt @map("updated_at")
+
+  @@index([profileId])
+  @@map("profile_certifications")
+}
+
+model ProfileProject {
+  id               String         @id @default(uuid())
+  profileId        String         @map("profile_id")
+  profile          UserProfile    @relation(fields: [profileId], references: [id], onDelete: Cascade)
+  name             String
+  description      String?        @db.Text
+  role             String?
+  startDate        DateTime?      @map("start_date")
+  endDate          DateTime?      @map("end_date")
+  startYear        Int?           @map("start_year")
+  startMonth       Int?           @map("start_month")
+  endYear          Int?           @map("end_year")
+  endMonth         Int?           @map("end_month")
+  isCurrent        Boolean        @default(false) @map("is_current")
+  technologies     Json?
+  responsibilities Json?
+  achievements     Json?
+  liveUrl          String?        @map("live_url")
+  repoUrl          String?        @map("repo_url")
+  provenance       DataProvenance @default(MANUAL)
+  order            Int            @default(0)
+  createdAt        DateTime       @default(now()) @map("created_at")
+  updatedAt        DateTime       @updatedAt @map("updated_at")
+
+  @@index([profileId])
+  @@map("profile_projects")
+}
+
+model ProfileSkill {
+  id              String         @id @default(uuid())
+  profileId       String         @map("profile_id")
+  profile         UserProfile    @relation(fields: [profileId], references: [id], onDelete: Cascade)
+  name            String
+  category        String?
+  proficiency     String?
+  yearsExperience Int?           @map("years_experience")
+  provenance      DataProvenance @default(MANUAL)
+  createdAt       DateTime       @default(now()) @map("created_at")
+  updatedAt       DateTime       @updatedAt @map("updated_at")
+
+  @@unique([profileId, name])
+  @@index([profileId])
+  @@map("profile_skills")
+}
+
+model ProfileLanguage {
+  id          String         @id @default(uuid())
+  profileId   String         @map("profile_id")
+  profile     UserProfile    @relation(fields: [profileId], references: [id], onDelete: Cascade)
+  name        String
+  proficiency String?
+  provenance  DataProvenance @default(MANUAL)
+  createdAt   DateTime       @default(now()) @map("created_at")
+  updatedAt   DateTime       @updatedAt @map("updated_at")
+
+  @@unique([profileId, name])
+  @@index([profileId])
+  @@map("profile_languages")
+}
+
+model ProfileAchievement {
+  id           String         @id @default(uuid())
+  profileId    String         @map("profile_id")
+  profile      UserProfile    @relation(fields: [profileId], references: [id], onDelete: Cascade)
+  title        String
+  type         String?        @default("AWARD")
+  organization String?
+  date         DateTime?
+  year         Int?
+  month        Int?
+  description  String?        @db.Text
+  relevantUrl  String?        @map("relevant_url")
+  provenance   DataProvenance @default(MANUAL)
+  order        Int            @default(0)
+  createdAt    DateTime       @default(now()) @map("created_at")
+  updatedAt    DateTime       @updatedAt @map("updated_at")
+
+  @@index([profileId])
+  @@map("profile_achievements")
+}
+
+model SavedSearch {
+  id                String            @id @default(uuid())
+  userId            String            @map("user_id")
+  user              User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+  name              String            @db.VarChar(255)
+  search            String?           @db.VarChar(255)
+  categorySlug      String?           @map("category_slug") @db.VarChar(100)
+  city              String?           @db.VarChar(100)
+  country           String?           @db.VarChar(100)
+  workArrangement   WorkArrangement?  @map("work_arrangement")
+  remoteEligibility String?           @map("remote_eligibility") @db.VarChar(255)
+  employmentType    EmploymentType?   @map("employment_type")
+  experienceLevel   ExperienceLevel?  @map("experience_level")
+  minSalary         Decimal?          @db.Decimal(12, 2) @map("min_salary")
+  maxSalary         Decimal?          @db.Decimal(12, 2) @map("max_salary")
+  currency          String?           @default("ETB") @db.VarChar(10)
+  isAlertEnabled    Boolean           @default(true) @map("is_alert_enabled")
+  lastRunAt         DateTime?         @map("last_run_at")
+  lastAlertAt       DateTime?         @map("last_alert_at")
+  createdAt         DateTime          @default(now()) @map("created_at")
+  updatedAt         DateTime          @updatedAt @map("updated_at")
+  notifications     JobNotification[]
+
+  @@index([userId])
+  @@index([isAlertEnabled])
+  @@map("saved_searches")
+}
+
+model JobNotification {
+  id                 String                     @id @default(uuid())
+  userId             String                     @map("user_id")
+  user               User                       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  jobId              String                     @map("job_id")
+  job                Job                        @relation(fields: [jobId], references: [id], onDelete: Cascade)
+  savedSearchId      String?                    @map("saved_search_id")
+  savedSearch        SavedSearch?               @relation(fields: [savedSearchId], references: [id], onDelete: SetNull)
+  matchedSearchNames Json?                      @map("matched_search_names")
+  channel            NotificationChannel        @default(IN_APP)
+  status             NotificationDeliveryStatus @default(DELIVERED)
+  isRead             Boolean                    @default(false) @map("is_read")
+  readAt             DateTime?                  @map("read_at")
+  createdAt          DateTime                   @default(now()) @map("created_at")
+  updatedAt          DateTime                   @updatedAt @map("updated_at")
+
+  @@unique([userId, jobId])
+  @@index([userId, isRead])
+  @@index([userId, createdAt])
+  @@index([jobId])
+  @@index([savedSearchId])
+  @@map("job_notifications")
+}
+
+model GeneratedDocument {
+  id                    String                   @id @default(uuid())
+  userId                String                   @map("user_id")
+  user                  User                     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  documentType          GeneratedDocumentType    @map("document_type")
+  title                 String                   @db.VarChar(255)
+
+  // Target Job Association (Platform or External)
+  jobId                 String?                  @map("job_id")
+  job                   Job?                     @relation(fields: [jobId], references: [id], onDelete: SetNull)
+  targetJobTitle        String                   @map("target_job_title") @db.VarChar(255)
+  targetCompanyName     String                   @map("target_company_name") @db.VarChar(255)
+  targetJobDescription String?                  @map("target_job_description") @db.Text
+
+  // Optional Direct Application Association
+  applicationId         String?                  @map("application_id")
+  application           JobApplication?          @relation(fields: [applicationId], references: [id], onDelete: SetNull)
+
+  // Current Version Pointer & State
+  currentVersionNumber  Int                      @default(1) @map("current_version_number")
+  status                GenerationStatus         @default(DRAFT)
+  failureReason         String?                  @map("failure_reason") @db.Text
+
+  createdAt             DateTime                 @default(now()) @map("created_at")
+  updatedAt             DateTime                 @updatedAt @map("updated_at")
+
+  versions              GeneratedDocumentVersion[]
+
+  @@index([userId])
+  @@index([jobId])
+  @@index([applicationId])
+  @@index([documentType])
+  @@map("generated_documents")
+}
+
+model GeneratedDocumentVersion {
+  id                 String            @id @default(uuid())
+  documentId         String            @map("document_id")
+  document           GeneratedDocument @relation(fields: [documentId], references: [id], onDelete: Cascade)
+  versionNumber      Int               @map("version_number")
+
+  // Content Payloads
+  content            String            @db.LongText
+  structuredData     Json?             @map("structured_data")
+  subjectLine        String?           @map("subject_line") @db.VarChar(500)
+
+  // Generation & Audit Metadata
+  promptVersion      String            @map("prompt_version") @db.VarChar(50)
+  modelIdentifier    String            @map("model_identifier") @db.VarChar(100)
+  changeSummary      String?           @map("change_summary") @db.VarChar(255)
+
+  // Optional Stored Document Reference (if exported to UserDocument / Drive)
+  compiledDocumentId String?           @map("compiled_document_id")
+  compiledDocument   UserDocument?     @relation(fields: [compiledDocumentId], references: [id], onDelete: SetNull)
+
+  createdAt          DateTime          @default(now()) @map("created_at")
+
+  @@unique([documentId, versionNumber])
+  @@index([documentId])
+  @@map("generated_document_versions")
+}
+
+model VerificationCode {
+  id          String           @id @default(uuid())
+  userId      String           @map("user_id")
+  user        User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  type        VerificationType
+  target      String           // normalized email or phone number
+  codeHash    String           @map("code_hash")
+  attempts    Int              @default(0)
+  maxAttempts Int              @default(5) @map("max_attempts")
+  isUsed      Boolean          @default(false) @map("is_used")
+  expiresAt   DateTime         @map("expires_at")
+  consumedAt  DateTime?        @map("consumed_at")
+  createdAt   DateTime         @default(now()) @map("created_at")
+  updatedAt   DateTime         @updatedAt @map("updated_at")
+
+  @@index([userId, type])
+  @@index([target, type])
+  @@index([expiresAt])
+  @@map("verification_codes")
+}
+
+
+

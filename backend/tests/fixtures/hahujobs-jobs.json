@@ -1,0 +1,162 @@
+{
+  "data": {
+    "search_jobs": [
+      {
+        "id": "6ac4b91bbd1ef03672614d3e",
+        "title": "SALES REPRESENTATIVE",
+        "summary": "The successful candidate should possess a Bachelor’s Degree in Sales and Marketing with at least 2 years of relevant professional experience.",
+        "description": "<p>Job Overview</p><p>INFINX Ethiopia is looking for a motivated Sales Representative to promote and sell company products.</p><h3>Job Requirements</h3><p>Bachelor degree in Sales & Marketing. Minimum 2 years experience.</p><h3>How To Apply</h3><p>Interested candidates send CV to transsionmanufacturinghr@gmail.com</p>",
+        "type": "full_time",
+        "years_of_experience": 2,
+        "max_years_of_experience": 5,
+        "salary": 18000,
+        "salary_currency": "ETB",
+        "payment_period": "monthly",
+        "deadline": "2026-10-30T00:00:00+00:00",
+        "created_at": "2026-10-18T10:00:00.000Z",
+        "updated_at": "2026-10-24T06:00:00.000Z",
+        "approved_on": "2026-10-18T12:00:00.000Z",
+        "posted_on": "2026-10-18T11:00:00.000Z",
+        "location": ", Addis abeba",
+        "is_online": false,
+        "application_method": "email",
+        "application_url": "",
+        "application_email": "transsionmanufacturinghr@gmail.com",
+        "how_to_apply": "Send updated CV to email",
+        "url": "https://ethiojobs.net/jobs/1e7Z6RNfjC-sales-representative",
+        "source": "ethiojobs",
+        "expired": false,
+        "requested_to_delete": false,
+        "priority": 1,
+        "number_of_applicants": 12,
+        "view_count": 140,
+        "esco_code": "3322.1",
+        "entity": {
+          "id": "AD66VamrVwYXS3CVKmi8b",
+          "name": "Transsion Manufacturing PLC",
+          "logo": "https://cdn.hahu.jobs/public/aggregator/entityLogo/test.png"
+        },
+        "company": null,
+        "job_cities": [
+          {
+            "city": {
+              "id": "city-001",
+              "name": "Addis Ababa"
+            }
+          }
+        ],
+        "sub_sector": {
+          "id": "sub-001",
+          "name": "Sales",
+          "sector": {
+            "id": "sec-001",
+            "name": "Commercial"
+          }
+        }
+      },
+      {
+        "id": "6ad53368e0864b7a27406df3",
+        "title": "Senior Software Architect",
+        "summary": "US Academy seeks an experienced software architect for educational cloud platforms.",
+        "description": "<p>Looking for a Senior Software Architect with 7+ years experience in distributed cloud systems.</p>",
+        "type": "contract",
+        "years_of_experience": 7,
+        "max_years_of_experience": null,
+        "salary": null,
+        "salary_currency": null,
+        "payment_period": "monthly",
+        "deadline": "2026-11-20T00:00:00+00:00",
+        "created_at": "2026-10-19T08:00:00.000Z",
+        "updated_at": "2026-10-24T05:00:00.000Z",
+        "approved_on": "2026-10-19T09:00:00.000Z",
+        "posted_on": "2026-10-19T08:30:00.000Z",
+        "location": "Remote, Ethiopia",
+        "is_online": true,
+        "application_method": "online",
+        "application_url": "https://usacademy.edu.et/careers/apply/arch-01",
+        "application_email": null,
+        "how_to_apply": "Apply via online career portal",
+        "url": "https://hahu.jobs/jobs/6ad53368e0864b7a27406df3",
+        "source": "hahu_direct",
+        "expired": false,
+        "requested_to_delete": false,
+        "priority": 2,
+        "number_of_applicants": 5,
+        "view_count": 85,
+        "esco_code": "2511.2",
+        "entity": {
+          "id": "NrH9PubFwTwpPxbE",
+          "name": "US Academy",
+          "logo": null
+        },
+        "company": null,
+        "job_cities": [],
+        "sub_sector": {
+          "id": "sub-002",
+          "name": "Information Technology",
+          "sector": {
+            "id": "sec-002",
+            "name": "Technology"
+          }
+        }
+      },
+      {
+        "id": "6abdf6ffe62c041b369ddb8c",
+        "title": "Accountant & Finance Officer",
+        "summary": "Welkite Cooperative Union is hiring an experienced accountant.",
+        "description": "<p>Responsible for payroll, financial reconciliations, and tax compliance.</p>",
+        "type": "full_time",
+        "years_of_experience": 3,
+        "max_years_of_experience": 5,
+        "salary": 14000,
+        "salary_currency": "ETB",
+        "payment_period": "monthly",
+        "deadline": "2026-11-05T00:00:00+00:00",
+        "created_at": "2026-10-17T12:00:00.000Z",
+        "updated_at": "2026-10-24T04:00:00.000Z",
+        "approved_on": "2026-10-17T14:00:00.000Z",
+        "posted_on": "2026-10-17T13:00:00.000Z",
+        "location": "Welkite",
+        "is_online": false,
+        "application_method": "in_person",
+        "application_url": null,
+        "application_email": null,
+        "how_to_apply": "Submit physical documents at Welkite head office",
+        "url": "https://ethiopianreporterjobs.com/jobs/welkite-accountant",
+        "source": "ethiopian_reporter_jobs",
+        "expired": false,
+        "requested_to_delete": false,
+        "priority": 0,
+        "number_of_applicants": 8,
+        "view_count": 92,
+        "esco_code": "2411.1",
+        "entity": null,
+        "company": {
+          "id": "comp-001",
+          "name": "Welkite Cooperative Union"
+        },
+        "job_cities": [
+          {
+            "city": {
+              "id": "city-002",
+              "name": "Welkite"
+            }
+          }
+        ],
+        "sub_sector": {
+          "id": "sub-003",
+          "name": "Finance",
+          "sector": {
+            "id": "sec-003",
+            "name": "Finance & Accounting"
+          }
+        }
+      }
+    ],
+    "search_jobs_aggregate": {
+      "aggregate": {
+        "count": 1441
+      }
+    }
+  }
+}

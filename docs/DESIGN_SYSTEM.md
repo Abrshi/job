@@ -255,3 +255,4 @@ Dashboard Header (<nav>): Use bg-stormy-dark text-white for a grounded top bar, 
 Side Navigation: bg-stormy-canvas with border-r border-stormy-border. Active nav items: bg-stormy-mist/40 text-stormy-dark font-medium.
 
 Main Area: bg-stormy-canvas min-h-screen text-stormy-main.
+

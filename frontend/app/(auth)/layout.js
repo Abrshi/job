@@ -17,7 +17,7 @@ export default function AuthLayout({ children }) {
       </div>
 
       {/* Auth Card Container */}
-      <div className="w-full max-w-md bg-white border border-stormy-border rounded-2xl p-6 sm:p-8 shadow-card">
+      <div className="w-full max-w-md">
         {children}
       </div>
 
@@ -28,4 +28,3 @@ export default function AuthLayout({ children }) {
     </div>
   );
 }
-

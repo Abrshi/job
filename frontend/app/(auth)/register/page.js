@@ -10,8 +10,9 @@ export default function RegisterPage() {
   const router = useRouter();
 
   useEffect(() => {
-    if (!loading && isAuthenticated && user) {
-      const target = user.role === 'ADMIN' ? '/admin' : '/profile';
+    // Only redirect if authenticated AND email has been verified
+    if (!loading && isAuthenticated && user && user.isEmailVerified) {
+      const target = user.role === 'ADMIN' ? '/admin' : '/jobs';
       router.replace(target);
     }
   }, [loading, isAuthenticated, user, router]);

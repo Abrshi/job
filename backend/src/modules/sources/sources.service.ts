@@ -3,6 +3,7 @@ import { sourcesRepository, SourcesRepository, SafeJobSource } from './sources.r
 import { jobsRepository, JobsRepository } from '../jobs/jobs.repository';
 import { adapterRegistry, AdapterRegistry } from './adapters/adapter.registry';
 import { classificationService, ClassificationService } from '../classification/classification.service';
+import { notificationsService } from '../alerts/notifications.service';
 import { AppError } from '../../middleware/error-handler';
 import { logger } from '../../lib/logger';
 
@@ -158,12 +159,17 @@ export class SourcesService {
           `fetched=${recordsFetched}, created=${jobsCreated}, updated=${jobsUpdated}, skipped=${jobsSkipped}`
       );
 
-      // Trigger asynchronous classification for queued jobs (without blocking response)
-      setImmediate(() => {
-        this.classificationSvc.processPendingJobs(50).catch((err) => {
-          logger.error('Background classification queue processing error:', err.message);
+      // Trigger asynchronous classification and alert evaluation (without blocking response, skip during tests)
+      if (process.env.NODE_ENV !== 'test') {
+        setImmediate(() => {
+          this.classificationSvc.processPendingJobs(50).catch((err) => {
+            logger.error('Background classification queue processing error:', err.message);
+          });
+          notificationsService.processPendingJobAlerts().catch((alertErr) => {
+            logger.error('Background alert evaluation error after collection:', alertErr.message);
+          });
         });
-      });
+      }
 
       return completedRun;
     } catch (err: unknown) {

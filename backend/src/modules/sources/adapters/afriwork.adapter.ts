@@ -63,27 +63,44 @@ export class AfriworkAdapter implements SourceAdapter {
     const offset = typeof options?.checkpoint === 'number' ? options.checkpoint : 0;
 
     const query = `
-      query GetAfriworkJobs($limit: Int, $offset: Int) {
-        jobs(limit: $limit, offset: $offset, order_by: { created_at: desc }) {
+      query GetAllJobs($offset: Int!, $limit: Int!, $whereCondition: jobs_bool_exp!, $orderCondition: [jobs_order_by!]) {
+        jobs(order_by: $orderCondition, offset: $offset, limit: $limit, where: $whereCondition) {
           id
           title
-          description
           created_at
+          updated_at
+          published_at
+          approval_status
+          description
+          job_type
+          job_site
           deadline
-          employment_type
+          compensation_amount_cents
+          compensation_type
+          compensation_currency
           experience_level
-          is_remote
-          city
-          country
-          min_salary
-          max_salary
-          salary_currency
-          salary_period
-          company {
+          entity {
+            type
             name
-            website
           }
-          application_url
+          city {
+            name
+            country {
+              name
+            }
+          }
+          sectors {
+            sector {
+              name
+              id
+            }
+          }
+          skill_requirements {
+            skill {
+              name
+              id
+            }
+          }
         }
       }
     `;
@@ -92,7 +109,11 @@ export class AfriworkAdapter implements SourceAdapter {
     const requestHeaders: Record<string, string> = {
       'Content-Type': 'application/json',
       Accept: 'application/json',
-      'User-Agent': 'JobAggregator/1.0 (+https://github.com/starcher/job)',
+      'x-hasura-role': 'anonymous',
+      Origin: 'https://afriworket.com',
+      Referer: 'https://afriworket.com/',
+      'User-Agent':
+        'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
     };
 
     if (source.headers && typeof source.headers === 'object' && !Array.isArray(source.headers)) {
@@ -113,7 +134,12 @@ export class AfriworkAdapter implements SourceAdapter {
         headers: requestHeaders,
         body: JSON.stringify({
           query,
-          variables: { limit, offset },
+          variables: {
+            offset,
+            limit,
+            whereCondition: { approval_status: { _eq: 'PUBLISHED' } },
+            orderCondition: [{ latest_activity_at: 'desc' }],
+          },
         }),
         signal: controller.signal,
       });
@@ -181,25 +207,70 @@ export class AfriworkAdapter implements SourceAdapter {
       const externalId = j.id ? String(j.id) : null;
       const originalUrl = externalId ? `https://afriworket.com/jobs/${externalId}` : source.endpointUrl;
 
+      // Extract company name from entity or company relation
+      const companyName = j.entity?.name || j.company?.name || null;
+
+      // Extract city and country
+      const cityName = j.city?.name || (typeof j.city === 'string' ? j.city : null);
+      let countryName = j.city?.country?.name || (typeof j.country === 'string' ? j.country : 'Ethiopia');
+      if (typeof countryName === 'string' && countryName.toUpperCase() === 'ETHIOPIA') {
+        countryName = 'Ethiopia';
+      }
+
+      // Remote & work arrangement
+      const isRemote = j.job_site === 'REMOTE' || Boolean(j.is_remote);
+      let workArrangement: WorkArrangementType = 'ON_SITE';
+      if (j.job_site === 'REMOTE' || j.is_remote) {
+        workArrangement = 'REMOTE';
+      } else if (j.job_site === 'HYBRID') {
+        workArrangement = 'HYBRID';
+      }
+
+      // Employment type & experience level
+      const employmentType = this.mapEmploymentType(j.job_type || j.employment_type);
+      const experienceLevel = this.mapExperienceLevel(j.experience_level);
+
+      // Salary
+      let salaryMin: number | null = null;
+      let salaryMax: number | null = null;
+      if (typeof j.compensation_amount_cents === 'number') {
+        salaryMin = j.compensation_amount_cents / 100;
+        salaryMax = j.compensation_amount_cents / 100;
+      } else {
+        if (typeof j.min_salary === 'number') salaryMin = j.min_salary;
+        if (typeof j.max_salary === 'number') salaryMax = j.max_salary;
+      }
+
+      const salaryCurrency = j.compensation_currency || j.salary_currency || (salaryMin ? 'ETB' : null);
+      const salaryPeriod = this.mapSalaryPeriod(j.compensation_type || j.salary_period);
+
+      // Dates
+      const publishedAt = j.published_at
+        ? new Date(j.published_at)
+        : j.created_at
+        ? new Date(j.created_at)
+        : null;
+      const closingDate = j.deadline ? new Date(j.deadline) : null;
+
       return {
         externalId,
         originalUrl,
-        applicationUrl: j.application_url || null,
+        applicationUrl: j.application_url || (externalId ? `https://afriworket.com/jobs/${externalId}` : null),
         title: j.title || 'Untitled Position',
         description: j.description || '',
-        companyName: j.company?.name || null,
-        country: j.country || 'Ethiopia',
-        city: j.city || null,
-        isRemote: Boolean(j.is_remote),
-        workArrangement: j.is_remote ? 'REMOTE' : 'ON_SITE',
-        employmentType: this.mapEmploymentType(j.employment_type),
-        experienceLevel: this.mapExperienceLevel(j.experience_level),
-        salaryMin: typeof j.min_salary === 'number' ? j.min_salary : null,
-        salaryMax: typeof j.max_salary === 'number' ? j.max_salary : null,
-        salaryCurrency: j.salary_currency || (j.min_salary ? 'ETB' : null),
-        salaryPeriod: this.mapSalaryPeriod(j.salary_period),
-        publishedAt: j.created_at ? new Date(j.created_at) : null,
-        closingDate: j.deadline ? new Date(j.deadline) : null,
+        companyName,
+        country: countryName,
+        city: cityName,
+        isRemote,
+        workArrangement,
+        employmentType,
+        experienceLevel,
+        salaryMin,
+        salaryMax,
+        salaryCurrency,
+        salaryPeriod,
+        publishedAt,
+        closingDate,
         rawPayload: j,
       };
     });

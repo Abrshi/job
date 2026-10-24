@@ -29,6 +29,23 @@ export default function Home() {
                 Stop checking dozens of separate job sites every morning. Discover aggregated listings, personalized matches, and manage your pipeline in one clean interface.
               </p>
 
+              {/* Action Links */}
+              <div className="flex flex-wrap items-center justify-center lg:justify-start gap-3 pt-1">
+                <a
+                  href="/jobs"
+                  className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-stormy-dark hover:bg-stormy-darkHover text-white font-bold text-sm shadow-subtle transition-colors"
+                >
+                  <span>Browse Open Jobs</span>
+                  <span>&rarr;</span>
+                </a>
+                <a
+                  href="#auth-card"
+                  className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl border border-stormy-border bg-white hover:border-stormy-slate text-xs font-semibold text-stormy-dark transition-colors"
+                >
+                  Sign In / Register
+                </a>
+              </div>
+
               {/* Value Highlights */}
               <div className="pt-2 space-y-3 max-w-lg mx-auto lg:mx-0 text-left">
                 <div className="flex items-start gap-3">

@@ -54,6 +54,10 @@ export class AppError extends Error {
     return new AppError(message, 409, code, details, cause);
   }
 
+  static tooManyRequests(message = 'Too many requests', code = 'TOO_MANY_REQUESTS', cause?: unknown): AppError {
+    return new AppError(message, 429, code, undefined, cause);
+  }
+
   static validation(message = 'Validation failed', details?: ErrorDetail[], cause?: unknown): AppError {
     return new AppError(message, 400, 'VALIDATION_ERROR', details, cause);
   }
@@ -73,6 +77,8 @@ function defaultCodeForStatus(statusCode: number): string {
       return 'FORBIDDEN';
     case 404:
       return 'NOT_FOUND';
+    case 429:
+      return 'TOO_MANY_REQUESTS';
     case 409:
       return 'CONFLICT';
     case 422:

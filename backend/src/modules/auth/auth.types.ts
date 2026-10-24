@@ -13,6 +13,7 @@ export interface UserResponse {
   lastName?: string | null;
   role: UserRole;
   isEmailVerified: boolean;
+  avatarUrl?: string | null;
   createdAt: Date;
 }
 

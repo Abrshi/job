@@ -29,3 +29,23 @@ export const authenticate = (req: Request, res: Response, next: NextFunction) =>
     return next(new AppError('Authentication failed', 401, 'AUTHENTICATION_FAILED', undefined, err));
   }
 };
+
+export const optionalAuthenticate = (req: Request, res: Response, next: NextFunction) => {
+  const authHeader = req.headers.authorization;
+  if (!authHeader || !authHeader.startsWith('Bearer ')) {
+    return next();
+  }
+
+  const token = authHeader.split(' ')[1];
+  if (!token) {
+    return next();
+  }
+
+  try {
+    const decoded = jwt.verify(token, env.ACCESS_TOKEN_SECRET) as AuthUserPayload;
+    req.user = decoded;
+  } catch {
+    // Continue anonymously for public routes
+  }
+  next();
+};
