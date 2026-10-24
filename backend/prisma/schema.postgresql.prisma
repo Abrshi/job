@@ -143,6 +143,18 @@ enum DataProvenance {
   IMPORTED
 }
 
+enum NotificationChannel {
+  IN_APP
+  EMAIL
+}
+
+enum NotificationDeliveryStatus {
+  PENDING
+  DELIVERED
+  FAILED
+  SKIPPED
+}
+
 model User {
   id              String           @id @default(uuid())
   email           String           @unique
@@ -160,6 +172,8 @@ model User {
   savedJobs       SavedJob[]
   applications    JobApplication[]
   documents       UserDocument[]
+  savedSearches   SavedSearch[]
+  notifications   JobNotification[]
 
   @@map("users")
 }
@@ -253,6 +267,7 @@ model Job {
   classifications          JobClassification[]
   savedBy                  SavedJob[]
   applications             JobApplication[]
+  notifications            JobNotification[]
 
   @@unique([sourceId, fingerprint])
   @@index([sourceId])
@@ -678,3 +693,56 @@ model ProfileAchievement {
   @@index([profileId])
   @@map("profile_achievements")
 }
+
+model SavedSearch {
+  id                String            @id @default(uuid())
+  userId            String            @map("user_id")
+  user              User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+  name              String
+  search            String?
+  categorySlug      String?           @map("category_slug")
+  city              String?
+  country           String?
+  workArrangement   WorkArrangement?  @map("work_arrangement")
+  remoteEligibility String?           @map("remote_eligibility")
+  employmentType    EmploymentType?   @map("employment_type")
+  experienceLevel   ExperienceLevel?  @map("experience_level")
+  minSalary         Decimal?          @db.Decimal(12, 2) @map("min_salary")
+  maxSalary         Decimal?          @db.Decimal(12, 2) @map("max_salary")
+  currency          String?           @default("ETB")
+  isAlertEnabled    Boolean           @default(true) @map("is_alert_enabled")
+  lastRunAt         DateTime?         @map("last_run_at")
+  lastAlertAt       DateTime?         @map("last_alert_at")
+  createdAt         DateTime          @default(now()) @map("created_at")
+  updatedAt         DateTime          @updatedAt @map("updated_at")
+  notifications     JobNotification[]
+
+  @@index([userId])
+  @@index([isAlertEnabled])
+  @@map("saved_searches")
+}
+
+model JobNotification {
+  id                 String                     @id @default(uuid())
+  userId             String                     @map("user_id")
+  user               User                       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  jobId              String                     @map("job_id")
+  job                Job                        @relation(fields: [jobId], references: [id], onDelete: Cascade)
+  savedSearchId      String?                    @map("saved_search_id")
+  savedSearch        SavedSearch?               @relation(fields: [savedSearchId], references: [id], onDelete: SetNull)
+  matchedSearchNames Json?                      @map("matched_search_names")
+  channel            NotificationChannel        @default(IN_APP)
+  status             NotificationDeliveryStatus @default(DELIVERED)
+  isRead             Boolean                    @default(false) @map("is_read")
+  readAt             DateTime?                  @map("read_at")
+  createdAt          DateTime                   @default(now()) @map("created_at")
+  updatedAt          DateTime                   @updatedAt @map("updated_at")
+
+  @@unique([userId, jobId])
+  @@index([userId, isRead])
+  @@index([userId, createdAt])
+  @@index([jobId])
+  @@index([savedSearchId])
+  @@map("job_notifications")
+}
+

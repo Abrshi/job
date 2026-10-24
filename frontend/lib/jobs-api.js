@@ -334,4 +334,115 @@ export async function deleteReminder(id, reminderId) {
   return res.data;
 }
 
+/**
+ * Create a new saved search
+ */
+export async function createSavedSearch(data) {
+  const res = await apiClient.post('/saved-searches', data);
+  return res.data;
+}
+
+/**
+ * Fetch all saved searches for the current user
+ */
+export async function fetchSavedSearches() {
+  const res = await apiClient.get('/saved-searches');
+  return res.data.savedSearches;
+}
+
+/**
+ * Fetch single saved search by ID
+ */
+export async function fetchSavedSearchById(id) {
+  const res = await apiClient.get(`/saved-searches/${id}`);
+  return res.data.savedSearch;
+}
+
+/**
+ * Update saved search
+ */
+export async function updateSavedSearch(id, data) {
+  const res = await apiClient.put(`/saved-searches/${id}`, data);
+  return res.data.savedSearch;
+}
+
+/**
+ * Toggle alert on/off for saved search
+ */
+export async function toggleSavedSearchAlert(id) {
+  const res = await apiClient.patch(`/saved-searches/${id}/toggle-alert`);
+  return res.data.savedSearch;
+}
+
+/**
+ * Delete saved search
+ */
+export async function deleteSavedSearch(id) {
+  const res = await apiClient.delete(`/saved-searches/${id}`);
+  return res.data;
+}
+
+/**
+ * Run a saved search live and return matching catalog jobs
+ */
+export async function runSavedSearch(id, page = 1, limit = 20) {
+  const res = await apiClient.get(`/saved-searches/${id}/run?page=${page}&limit=${limit}`);
+  return res.data;
+}
+
+/**
+ * Fetch user's job notifications
+ */
+export async function fetchNotifications(params = {}) {
+  const query = new URLSearchParams();
+  if (params.page) query.set('page', String(params.page));
+  if (params.limit) query.set('limit', String(params.limit));
+  if (params.unreadOnly !== undefined) query.set('unreadOnly', String(params.unreadOnly));
+  const queryString = query.toString();
+  const endpoint = queryString ? `/notifications?${queryString}` : '/notifications';
+  const res = await apiClient.get(endpoint);
+  return res.data;
+}
+
+/**
+ * Fetch count of unread notifications for badge
+ */
+export async function fetchUnreadNotificationCount() {
+  const res = await apiClient.get('/notifications/unread-count');
+  return res.data.unreadCount || 0;
+}
+
+/**
+ * Mark a single notification as read
+ */
+export async function markNotificationRead(id) {
+  const res = await apiClient.patch(`/notifications/${id}/read`);
+  return res.data.notification;
+}
+
+/**
+ * Mark all notifications as read
+ */
+export async function markAllNotificationsRead() {
+  const res = await apiClient.patch('/notifications/read-all');
+  return res.data;
+}
+
+/**
+ * Delete a notification
+ */
+export async function deleteNotification(id) {
+  const res = await apiClient.delete(`/notifications/${id}`);
+  return res.data;
+}
+
+/**
+ * Clear all read notifications
+ */
+export async function clearReadNotifications() {
+  const res = await apiClient.delete('/notifications');
+  return res.data;
+}
+
+
 

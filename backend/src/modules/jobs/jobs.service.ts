@@ -455,6 +455,7 @@ export class JobsService {
         id: true,
         normalizedTitle: true,
         originalTitle: true,
+        companyName: true,
         status: true,
         closingDate: true,
         applicationMethod: true,
@@ -619,9 +620,9 @@ export class JobsService {
             }
           : {
               id: null,
-              title: app.externalJobTitle,
-              companyName: app.externalCompanyName,
-              city: app.externalLocation,
+              title: app.jobTitle,
+              companyName: app.companyName,
+              city: app.location,
               country: null,
               workArrangement: null,
               employmentType: null,

@@ -6,6 +6,7 @@ import { useRouter } from 'next/navigation';
 import { useAuth } from '@/hooks/use-auth';
 import { Button } from '@/components/ui/button';
 import { getAvatarUrl } from '@/lib/jobs-api';
+import { NotificationBell } from '@/components/notifications/notification-bell';
 
 export function Navbar() {
   const { user, isAuthenticated, loading, logout } = useAuth();
@@ -65,6 +66,9 @@ export function Navbar() {
                   <Link href="/jobs/saved" className="hover:text-stormy-dark transition-colors">
                     Saved Jobs
                   </Link>
+                  <Link href="/jobs/saved-searches" className="hover:text-stormy-dark transition-colors">
+                    Saved Searches
+                  </Link>
                   <Link href="/jobs/applications" className="hover:text-stormy-dark transition-colors">
                     Applications
                   </Link>
@@ -90,7 +94,9 @@ export function Navbar() {
             {loading ? (
               <div className="w-24 h-9 bg-slate-100 animate-pulse rounded-lg" />
             ) : isAuthenticated ? (
-              <div className="flex items-center gap-4">
+              <div className="flex items-center gap-3">
+                <NotificationBell />
+
                 <Link
                   href={user?.role === 'ADMIN' ? '/admin' : '/profile'}
                   className="flex items-center gap-2.5 p-1.5 rounded-lg hover:bg-stormy-canvas transition-colors text-left"
@@ -141,7 +147,9 @@ export function Navbar() {
           </div>
 
           {/* Mobile menu button */}
-          <div className="flex md:hidden">
+          <div className="flex items-center gap-2 md:hidden">
+            {isAuthenticated && <NotificationBell />}
+
             <button
               type="button"
               onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
@@ -179,6 +187,20 @@ export function Navbar() {
                 className="block py-2 text-sm font-medium text-stormy-muted hover:text-stormy-dark"
               >
                 Saved Jobs
+              </Link>
+              <Link
+                href="/jobs/saved-searches"
+                onClick={() => setIsMobileMenuOpen(false)}
+                className="block py-2 text-sm font-medium text-stormy-muted hover:text-stormy-dark"
+              >
+                Saved Searches
+              </Link>
+              <Link
+                href="/notifications"
+                onClick={() => setIsMobileMenuOpen(false)}
+                className="block py-2 text-sm font-medium text-stormy-muted hover:text-stormy-dark"
+              >
+                Notifications
               </Link>
               <Link
                 href="/jobs/applications"
