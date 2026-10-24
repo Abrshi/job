@@ -84,3 +84,4 @@ export class InAppNotificationProvider implements INotificationProvider {
 
 export const emailNotificationProvider = new EmailNotificationProvider();
 export const inAppNotificationProvider = new InAppNotificationProvider();
+

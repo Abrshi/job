@@ -55,3 +55,4 @@ notificationsRoutes.patch('/read-all', markAllNotificationsRead);
 notificationsRoutes.delete('/', clearReadNotifications);
 notificationsRoutes.patch('/:id/read', validate(NotificationIdParamSchema), markNotificationRead);
 notificationsRoutes.delete('/:id', validate(NotificationIdParamSchema), deleteNotification);
+

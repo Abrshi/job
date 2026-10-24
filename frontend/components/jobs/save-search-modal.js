@@ -239,3 +239,4 @@ export function SaveSearchModal({ isOpen, onClose, filters = {}, onSaved }) {
     </div>
   );
 }
+

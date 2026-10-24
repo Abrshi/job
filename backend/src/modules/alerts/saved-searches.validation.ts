@@ -74,3 +74,4 @@ export type CreateSavedSearchInput = z.infer<typeof CreateSavedSearchSchema>['bo
 export type UpdateSavedSearchInput = z.infer<typeof UpdateSavedSearchSchema>['body'];
 export type RunSavedSearchQuery = z.infer<typeof RunSavedSearchQuerySchema>['query'];
 export type NotificationQueryInput = z.infer<typeof NotificationQuerySchema>['query'];
+

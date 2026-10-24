@@ -36,3 +36,4 @@ describe('Saved Searches and Job Notifications API Client Exports', () => {
     assert.strictEqual(typeof clearReadNotifications, 'function');
   });
 });
+

@@ -215,3 +215,4 @@ export class SavedSearchesService {
 }
 
 export const savedSearchesService = new SavedSearchesService();
+

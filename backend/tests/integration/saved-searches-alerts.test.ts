@@ -352,3 +352,4 @@ describe('Saved Searches and Job Alerts Integration Tests', () => {
     assert.strictEqual(resCheck.status, 404);
   });
 });
+

@@ -204,3 +204,4 @@ export async function clearReadNotifications(req: Request, res: Response, next: 
     next(err);
   }
 }
+
