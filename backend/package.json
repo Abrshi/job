@@ -14,6 +14,7 @@
     "prisma:migrate": "tsx scripts/sync-database-schema.ts && prisma migrate dev",
     "prisma:studio": "tsx scripts/sync-database-schema.ts && prisma studio",
     "seed": "tsx src/seeds/index.ts",
+    "sync:hahujobs": "tsx scripts/sync-hahujobs.ts",
     "test": "NODE_ENV=test tsx --test \"tests/**/*.test.ts\""
   },
   "keywords": [],

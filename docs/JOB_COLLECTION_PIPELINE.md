@@ -127,7 +127,53 @@ Execution history and observability metrics for data ingestion passes.
 
 ---
 
-## 4. Normalization & Deduplication Strategy
+## 4. HaHuJobs Integration Architecture & Adapter Implementation
+
+### Endpoint Investigation Findings
+- **Target Endpoint:** `https://graph.aggregator.hahu.jobs/v1/graphql`
+- **Protocol:** HTTP POST (Hasura GraphQL Engine)
+- **Root Query Fields:**
+  - `search_jobs(limit: Int!, offset: Int!, where: jobs_bool_exp!, order_by: [jobs_order_by!])`: Returns array of `jobs` records.
+  - `search_jobs_aggregate(where: jobs_bool_exp!)`: Returns aggregate metrics (e.g. `{ aggregate: { count: 1441 } }`).
+- **Standard Request Headers:**
+  - `Content-Type: application/json`
+  - `Accept: application/json`
+  - `Origin: https://hahu.jobs`
+  - `Referer: https://hahu.jobs/`
+  - `User-Agent: Mozilla/5.0 ...`
+  - Supports custom headers / tokens via `JobSource.headers` JSON column.
+- **Architectural Guardrails & Compliance:**
+  - The source is seeded in an **inactive** state (`isActive: false`) with slug `hahujobs` and 120-minute polling period.
+  - The adapter treats the observed browser endpoint as an external integration candidate; automated bulk synchronization in production must respect upstream Terms of Service and rate limits.
+  - Never logs authorization tokens, sensitive headers, or request secrets.
+  - Uses bounded exponential backoff (up to 3 retries) and 20-second timeout with `AbortController`.
+  - Filters out `requested_to_delete: true` and expired vacancies upstream while gracefully recording historical deadlines.
+
+### Field Mapping Specification
+
+| HaHuJobs GraphQL Field | Canonical `Job` Field | Transformation / Normalization |
+|---|---|---|
+| `id` | `externalId` | Preserved as exact source string identifier |
+| `id` | `fingerprint` | Stable hash `ext:<id>` preventing duplicates |
+| `title` | `originalTitle` & `normalizedTitle` | HTML-stripped, whitespace-collapsed string |
+| `description` / `summary` | `originalDescription` & `normalizedDescription` | HTML tags stripped for clean reading |
+| `entity.name` / `company.name` | `companyName` | Normalized employer organization name |
+| `job_cities[0].city.name` / `location` | `city` | Cleaned city name (e.g. `", Addis abeba"` -> `"Addis Ababa"`) |
+| N/A | `country` | Defaults to `"Ethiopia"` |
+| `type` | `employmentType` | `full_time` -> `FULL_TIME`, `contract` -> `CONTRACT`, `part_time` -> `PART_TIME`, `internship` -> `INTERNSHIP`, `freelance` -> `FREELANCE` |
+| `years_of_experience` | `experienceLevel` | `0` -> `ENTRY`, `1-2` -> `JUNIOR`, `3-5` -> `MID`, `>5` -> `SENIOR`, fallback `UNSPECIFIED` |
+| `salary` | `salaryMin` & `salaryMax` | Numeric scalar amount (ETB) |
+| `payment_period` | `salaryPeriod` | `monthly` -> `MONTHLY`, `hourly` -> `HOURLY`, `yearly` -> `YEARLY` |
+| `posted_on` / `approved_on` | `publishedAt` | ISO 8601 timestamp parsed to `Date` |
+| `deadline` | `closingDate` | Vacancy deadline timestamp |
+| `url` | `originalUrl` | Upstream syndicated URL (e.g. Ethiojobs, Reporter) or `https://hahu.jobs/jobs/<id>` |
+| `application_url` / `application_email` | `applicationUrl` | Direct URL or `mailto:<email>`. `null` if in-person or unavailable |
+| `is_online` | `isRemote` & `workArrangement` | Evaluated with location keywords (`REMOTE`, `HYBRID`, `ON_SITE`) |
+| Raw GraphQL record | `rawPayload` | Full JSON object stored for auditing and source fidelity |
+
+---
+
+## 5. Normalization & Deduplication Strategy
 
 ### Fingerprint Precedence
 1. **External ID:** If the provider provides an explicit vacancy ID:
