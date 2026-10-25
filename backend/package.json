@@ -5,7 +5,7 @@
   "main": "index.js",
   "scripts": {
     "dev": "npm run db:sync && tsx watch src/server.ts",
-    "build": "npm run db:sync && tsc",
+    "build": "npm run prisma:generate && tsc",
     "start": "node dist/server.js",
     "typecheck": "tsc --noEmit",
     "db:sync": "tsx scripts/sync-database-schema.ts",
