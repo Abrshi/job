@@ -1,0 +1,143 @@
+{
+  "pageProps": {
+    "jobs": {
+      "meta": {
+        "pageNumber": 1,
+        "itemsPerPage": 12,
+        "lastPage": 90,
+        "total": 1071
+      },
+      "data": [
+        {
+          "id": "eyJpdiI6IktWV0xqR2dPTlZwazArbS90UzlQVlE9PSIsInZhbHVlIjoibFgvS3ZMUWEwUHBsbnN3Q0Z6MlVwdz09IiwibWFjIjoiY2RhNmFlYzFjYWRkMzcxOTAzMDk3MjkyNGFjMGU3MjdmMmFkODg5ODM3OGYzYTg2MWI3MjgzMDdkYjhmOTZhNiIsInRhZyI6IiJ9",
+          "title": "RFP: Desk Review of Policy and Regulatory Frameworks Relevant to IRIF and Digital Climate-Smart Agriculture",
+          "slug": "9TTo7hSUwr-rfp-desk-review-of-policy-and-regulatory-frameworks-relevant-to-irif-and-digital-climate-smart-agriculture",
+          "type": 13,
+          "date_published": "2026-10-25T05:37:23.000000Z",
+          "level": 1,
+          "location_type": "Remote",
+          "description": "<p>Birrama Digital Commerce PLC invites qualified consultants to submit proposals for Desk Review of Policy Frameworks.</p><h3>Scope of Work</h3><p>Review existing agricultural and climate policy documents.</p>",
+          "state": "Addis Ababa",
+          "catalogs": [
+            {
+              "id": "eyJpdiI6ImYvUlJGTFdOV1B2QnRRMHFFMytpdkE9PSIsInZhbHVlIjoiOXZVM0VuQjdoSitxc2xrMnRUYXFVUT09IiwibWFjIjoiMzJjYTZkOGZkMmQyNjY1NTJiOGRjNDQxNDYyMTlkYWYxNDI3M2IxY2E4ZjcxNDY2YzQxYjFmMTc5YzM5NWQ4OCIsInRhZyI6IiJ9",
+              "name": "Agriculture",
+              "options": 694
+            }
+          ],
+          "date_expiry": "2026-11-15T23:59:59.000000Z",
+          "company": {
+            "id": "eyJpdiI6Ik9VWVlkdXdDdHBnMmJMdXJXTGNkbEE9PSIsInZhbHVlIjoiSmU2WU5acTB1Z1JGa2hvc3l3OFJYdz09IiwibWFjIjoiNDM0NGY2ZmFiNWRhZDFhNzcxYmRmNjc2YWQ0Yzc3ZDMwNWUwMmMzYWMxNzJjOWFiODAyODNkM2EzZmUzZjgzNiIsInRhZyI6IiJ9",
+            "name": "Birrama Digital Commerce PLC",
+            "slug": "birrama-digital-commerce-plc",
+            "logo": "company-logo/10932914/Birrama_logo.png"
+          },
+          "application_form": null,
+          "career_page_link": null,
+          "application_method": "EMAIL",
+          "application_email": "bids@irif.world"
+        },
+        {
+          "id": "eyJpdiI6ImFRUjBOUjBOUW5GcVoxRFNZV2x2UVE9PSIsInZhbHVlIjoiTVRjM05EZzVNekV6TkRVMk9UST09IiwibWFjIjoiZjRhYjkyNTAyZmM4YTg4MGJhMGFlYzg2OWYxMmMwZGY0MDllYTdiZTZiNGE5OTMwZWY3ZmMxOWQ0YmY0NGEzYyIsInRhZyI6IiJ9",
+          "title": "Core Network Product Technical Engineer",
+          "slug": "kL89mNbq12-core-network-product-technical-engineer",
+          "type": 8,
+          "date_published": "2026-10-24T08:15:00.000000Z",
+          "level": 2,
+          "location_type": "Office",
+          "description": "<p>Huawei Technologies Ethiopia is seeking an experienced Core Network Engineer.</p><ul><li>Responsible for CS/PS core network maintenance</li><li>Troubleshoot network issues</li></ul>",
+          "state": "Addis Ababa",
+          "catalogs": [
+            {
+              "name": "Telecommunications"
+            },
+            {
+              "name": "IT, Computer Science and Software Engineering"
+            }
+          ],
+          "date_expiry": "2026-11-20T17:00:00.000000Z",
+          "company": {
+            "name": "Huawei Technologies Ethiopia PLC",
+            "slug": "huawei-technologies-ethiopia-plc"
+          },
+          "application_form": "https://careers.huawei.com/jobs/apply/eth-network-001",
+          "career_page_link": null,
+          "application_method": "ATS",
+          "application_email": null
+        },
+        {
+          "id": "eyJpdiI6IlpHSnZiR1ZuZFdsbkxtbGtZV0ZzTVE9PSIsInZhbHVlIjoiT1RNNE5qWXpOamczT0RJeU1qZz09IiwibWFjIjoiOGY2YzA4MDNjODRkMDM2OTg4ZTQ1Zjg1NmI3M2NjM2E3Y2EzY2FkNGZlMDQ4Y2ZkNmY4YmM3NTVlYzA2OWVmYSIsInRhZyI6IiJ9",
+          "title": "Cashier & Accountant",
+          "slug": "xP12zKl90m-cashier-accountant",
+          "type": 8,
+          "date_published": "2026-10-23T14:30:00.000000Z",
+          "level": 2,
+          "location_type": "Hybrid",
+          "description": "<p>Manage daily petty cash transactions and general ledger reconciliation.</p>",
+          "state": "Oromia",
+          "catalogs": [
+            {
+              "name": "Accounting and Finance"
+            }
+          ],
+          "date_expiry": "2026-11-10T18:00:00.000000Z",
+          "company": {
+            "name": "Swiss Church Aid (HEKS/EPER) _ Ethiopia",
+            "slug": "swiss-church-aid-heks-eper-ethiopia"
+          },
+          "application_form": null,
+          "career_page_link": "https://en.heks.ch/jobs/ethiopia/cashier-accountant",
+          "application_method": "ATS",
+          "application_email": null
+        },
+        {
+          "id": "eyJpdiI6IlFVRkNSMU5TUlU1T1NWTlFSVk5VUlE9PSIsInZhbHVlIjoiTWprek5EVTROVEV4TWpjeU56TT09IiwibWFjIjoiYTBiY2QxMjM0NTY3ODkwYWJjZDEyMzQ1Njc4OTBhYmNkMTIzNDU2Nzg5MGFiY2QxMjM0NTY3ODkwYWJjZDEyMyIsInRhZyI6IiJ9",
+          "title": "Junior Office Assistant",
+          "slug": "j98Kl2MnOp-junior-office-assistant",
+          "type": 8,
+          "date_published": "2026-10-22T09:00:00.000000Z",
+          "level": 1,
+          "location_type": "Office",
+          "description": "<p>In-person physical applications only. Submit CV at front desk.</p>",
+          "state": "Hawassa, Sidama",
+          "catalogs": [
+            {
+              "name": "Administration & Office Support"
+            }
+          ],
+          "date_expiry": "2026-11-01T17:00:00.000000Z",
+          "company": null,
+          "application_form": null,
+          "career_page_link": null,
+          "application_method": "IN_PERSON",
+          "application_email": null
+        },
+        {
+          "id": "eyJpdiI6IlRFWlVSVWRWVDFSRlVsUkZUbFJWTVE9PSIsInZhbHVlIjoiT1RZMU5ETXlPREV6TkRNMk9UST09IiwibWFjIjoiMWExYjFjMWQxZTFmMWExYjFjMWQxZTFmMWExYjFjMWQxZTFmMWExYjFjMWQxZTFmMWExYjFjMWQxZTFmMWExYiIsInRhZyI6IiJ9",
+          "title": "Expired Senior Agronomist",
+          "slug": "exp998877-expired-senior-agronomist",
+          "type": 8,
+          "date_published": "2026-09-01T08:00:00.000000Z",
+          "level": 4,
+          "location_type": "Office",
+          "description": "<p>This position deadline has already passed.</p>",
+          "state": "Amhara",
+          "catalogs": [
+            {
+              "name": "Agriculture"
+            }
+          ],
+          "date_expiry": "2026-09-20T23:59:59.000000Z",
+          "company": {
+            "name": "Amhara Seed Enterprise"
+          },
+          "application_form": null,
+          "career_page_link": null,
+          "application_method": "EMAIL",
+          "application_email": "jobs@amharaseed.org"
+        }
+      ]
+    }
+  }
+}
+

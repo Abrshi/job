@@ -23,10 +23,18 @@ export class ClassificationService {
         job.normalizedDescription || job.originalDescription
       );
 
-      // Resolve category by slug
-      const category = await prisma.jobCategory.findUnique({
+      // Resolve category by slug, with fallback for legacy merged slugs if needed
+      let category = await prisma.jobCategory.findUnique({
         where: { slug: output.categorySlug },
       });
+
+      if (!category) {
+        if (output.categorySlug === 'design-creative' || output.categorySlug === 'media') {
+          category = await prisma.jobCategory.findUnique({
+            where: { slug: 'media-design-creative' },
+          });
+        }
+      }
 
       const { reviewStatus, jobStatus } = evaluateClassificationStatus(output.confidence);
 

@@ -1,4 +1,4 @@
-import { describe, it } from 'node:test';
+import { describe, it, after } from 'node:test';
 import assert from 'node:assert';
 import fs from 'node:fs';
 import path from 'node:path';
@@ -7,6 +7,15 @@ import { detectTargetProvider } from '../../scripts/sync-database-schema';
 describe('Database Provider Detection and Configuration', () => {
   const originalUrl = process.env.DATABASE_URL;
   const originalProvider = process.env.DB_PROVIDER;
+
+  after(() => {
+    process.env.DATABASE_URL = originalUrl;
+    if (originalProvider !== undefined) {
+      process.env.DB_PROVIDER = originalProvider;
+    } else {
+      delete process.env.DB_PROVIDER;
+    }
+  });
 
   it('detects explicit DB_PROVIDER=postgres and DB_PROVIDER=postgresql', () => {
     process.env.DB_PROVIDER = 'postgres';
@@ -63,8 +72,4 @@ describe('Database Provider Detection and Configuration', () => {
     const content = fs.readFileSync(mysqlSchemaPath, 'utf8');
     assert.match(content, /provider\s*=\s*"mysql"/);
   });
-
-  // Restore env
-  process.env.DATABASE_URL = originalUrl;
-  process.env.DB_PROVIDER = originalProvider;
 });

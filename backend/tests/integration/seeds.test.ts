@@ -102,7 +102,7 @@ describe('Database Seeding and Idempotency', () => {
 
     // Second run is idempotent
     const second = await seedSources();
-    assert.strictEqual(second.created, false);
+    assert.strictEqual(second.createdCount, 0);
   });
 
   after(async () => {

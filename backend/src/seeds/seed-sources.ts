@@ -48,5 +48,27 @@ export async function seedSources(): Promise<{ createdCount: number }> {
     logger.info('HaHuJobs source already exists. Skipping creation.');
   }
 
+  // 3. Ethiojobs
+  const ethioExisting = await prisma.jobSource.findUnique({
+    where: { slug: 'ethiojobs' },
+  });
+
+  if (!ethioExisting) {
+    await prisma.jobSource.create({
+      data: {
+        name: 'Ethiojobs',
+        slug: 'ethiojobs',
+        type: 'API',
+        endpointUrl: 'https://ethiojobs.net',
+        isActive: false, // Disabled by default pending official permission verification
+        pollingInterval: 120, // 2 hours
+      },
+    });
+    logger.info('Ethiojobs source created successfully (disabled by default pending confirmation).');
+    createdCount++;
+  } else {
+    logger.info('Ethiojobs source already exists. Skipping creation.');
+  }
+
   return { createdCount };
 }

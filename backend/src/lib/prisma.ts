@@ -14,9 +14,23 @@ const createPrismaClient = (): PrismaClient => {
 
   if (provider === 'postgresql') {
     logger.info('Initializing Prisma Client with PostgreSQL adapter (PrismaPg)');
+    let connStr = env.DATABASE_URL;
+    // Normalize connection parameters for Neon PostgreSQL pooler
+    if (connStr.includes('channel_binding=')) {
+      connStr = connStr.replace(/([?&])channel_binding=[^&]*(&|$)/, '$1').replace(/[?&]$/, '');
+    }
+
     const pool = new Pool({
-      connectionString: env.DATABASE_URL,
+      connectionString: connStr,
+      max: 10,
+      idleTimeoutMillis: 30000,
+      connectionTimeoutMillis: 15000,
     });
+
+    pool.on('error', (err) => {
+      logger.warn(`PostgreSQL client pool notice: ${err.message}`);
+    });
+
     const adapter = new PrismaPg(pool);
     return new PrismaClient({
       adapter,

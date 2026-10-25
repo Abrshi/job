@@ -8,6 +8,11 @@ const server = app.listen(env.PORT, () => {
   logger.info(`Server running in ${env.NODE_ENV} mode on port ${env.PORT}`);
   logger.info(`Health check available at http://localhost:${env.PORT}/api/v1/health`);
 
+  // Warm up database connection in background
+  prisma.$queryRaw`SELECT 1`.catch((err) => {
+    logger.warn(`Initial database connection warmup notice: ${(err as Error).message || err}`);
+  });
+
   // Start background job source scheduler
   sourceScheduler.start();
 });

@@ -19,8 +19,8 @@ export class SourceScheduler {
 
     logger.info(`Starting dynamic job source scheduler (tick interval: ${intervalMs / 1000}s)`);
 
-    // Initial tick after short delay
-    setTimeout(() => this.tick(), 2000);
+    // Initial tick after short warmup delay to accommodate remote serverless cold-starts
+    setTimeout(() => this.tick(), 5000);
 
     this.timer = setInterval(() => {
       this.tick();
@@ -99,8 +99,21 @@ export class SourceScheduler {
           logger.error('Error during scheduled job alert processing:', (alertErr as Error).message);
         });
       }
-    } catch (tickErr) {
-      logger.error('Error during scheduler tick:', (tickErr as Error).message);
+    } catch (tickErr: any) {
+      const msg = tickErr?.message || String(tickErr);
+      const code = tickErr?.code;
+      if (
+        code === 'P1001' ||
+        msg.includes("Can't reach database server") ||
+        msg.includes('ECONNRESET') ||
+        msg.includes('Connection terminated')
+      ) {
+        logger.warn(
+          'Scheduler database connection cold-starting or temporarily unreachable; will automatically retry on next tick.'
+        );
+      } else {
+        logger.error('Error during scheduler tick: ' + msg);
+      }
     } finally {
       this.isProcessing = false;
     }
