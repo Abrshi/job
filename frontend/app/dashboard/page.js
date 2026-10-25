@@ -12,8 +12,6 @@ export default function UniversalDashboardPage() {
     if (!loading) {
       if (!isAuthenticated) {
         router.replace('/?auth=login&returnUrl=/dashboard');
-      } else if (user?.role === 'ADMIN') {
-        router.replace('/admin');
       } else {
         router.replace('/profile');
       }

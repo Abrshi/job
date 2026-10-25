@@ -1,21 +1,47 @@
-# Dependencies
+# Dependencies (directories and symlinks at all levels)
+node_modules
 node_modules/
+**/node_modules
+**/node_modules/
+admin-backend/node_modules
+admin-frontend/node_modules
 
-# Environment files
+# Environment files (all levels, preserve .env.example)
 .env
 .env.*
+.env.local
+.env.*.local
+**/.env
+**/.env.*
+**/.env.local
+**/.env.*.local
 !.env.example
+!**/.env.example
 
-# Build outputs
+# Build and runtime outputs
 dist/
+**/dist/
+build/
+**/build/
 .next/
+**/.next/
 out/
+**/out/
+
+# Database runtime & uploads
+.mariadb_data/
+**/.mariadb_data/
+uploads/
+**/uploads/
+*.sock
+*.pid
 
 # Logs
 *.log
 npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
 
 # OS Files
 .DS_Store
 Thumbs.db
-

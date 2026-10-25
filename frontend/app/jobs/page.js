@@ -74,6 +74,7 @@ function JobsContent() {
         } else {
           setSources([
             { slug: 'hahujobs', name: 'HaHuJobs' },
+            { slug: 'ethiojobs', name: 'Ethiojobs' },
             { slug: 'afriwork', name: 'Afriwork' },
           ]);
         }
@@ -81,6 +82,7 @@ function JobsContent() {
         console.error('Failed to load taxonomies:', err);
         setSources([
           { slug: 'hahujobs', name: 'HaHuJobs' },
+          { slug: 'ethiojobs', name: 'Ethiojobs' },
           { slug: 'afriwork', name: 'Afriwork' },
         ]);
       }
@@ -248,8 +250,8 @@ function JobsContent() {
 
       {/* Hero / Search Header */}
       <section className="bg-gradient-to-b from-white to-stormy-canvas border-b border-stormy-border py-8 sm:py-10 px-4 sm:px-6 lg:px-8">
-        <div className="w-full max-w-[1760px] mx-auto">
-          <div className="max-w-4xl">
+        <div className="w-full">
+          <div>
             <h1 className="text-2xl sm:text-4xl font-extrabold text-stormy-main tracking-tight">
               Explore Job Opportunities
             </h1>
@@ -259,7 +261,7 @@ function JobsContent() {
           </div>
 
           {/* Search Bar */}
-          <form onSubmit={handleSearchSubmit} className="mt-6 flex flex-col sm:flex-row gap-3 max-w-4xl">
+          <form onSubmit={handleSearchSubmit} className="mt-6 flex flex-col sm:flex-row gap-3 w-full">
             <div className="relative flex-1">
               <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-stormy-muted">
                 <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -289,7 +291,7 @@ function JobsContent() {
               )}
             </div>
 
-            <Button type="submit" variant="primary" size="md" className="sm:w-auto">
+            <Button type="submit" variant="primary" size="md" className="sm:w-auto px-6">
               Search Jobs
             </Button>
           </form>
@@ -297,8 +299,8 @@ function JobsContent() {
       </section>
 
       {/* Main Content: Filter Sidebar + Job Grid */}
-      <main className="w-full max-w-[1760px] mx-auto px-4 sm:px-6 lg:px-8 py-8 flex-1">
-        <div className="flex flex-col lg:flex-row gap-8 items-start">
+      <main className="w-full px-4 sm:px-6 lg:px-8 py-8 flex-1">
+        <div className="flex flex-col lg:flex-row gap-6 xl:gap-8 items-start">
           {/* Mobile Filter Toggle */}
           <div className="lg:hidden w-full flex items-center justify-between pb-4 border-b border-stormy-border">
             <div className="flex items-center gap-2">
@@ -333,7 +335,7 @@ function JobsContent() {
 
           {/* Sidebar Filter Panel - Sticky on scroll */}
           <aside
-            className={`w-full lg:w-72 bg-white border border-stormy-border rounded-2xl p-5 shadow-card flex-shrink-0 lg:sticky lg:top-20 lg:self-start lg:max-h-[calc(100vh-6rem)] lg:overflow-y-auto ${
+            className={`w-full lg:w-72 xl:w-80 bg-white border border-stormy-border rounded-2xl p-5 shadow-card flex-shrink-0 lg:sticky lg:top-20 lg:self-start lg:max-h-[calc(100vh-6rem)] lg:overflow-y-auto overscroll-contain z-20 ${
               showMobileFilters ? 'block' : 'hidden lg:block'
             }`}
           >
@@ -701,8 +703,8 @@ function JobsContent() {
 
             {/* Loading Skeletons */}
             {isLoading ? (
-              <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
-                {[...Array(6)].map((_, i) => (
+              <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4 gap-4 xl:gap-5">
+                {[...Array(8)].map((_, i) => (
                   <div
                     key={i}
                     className="bg-white border border-stormy-border rounded-xl p-5 space-y-4 animate-pulse shadow-subtle"
@@ -742,7 +744,7 @@ function JobsContent() {
               </div>
             ) : (
               /* Job Cards Grid */
-              <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4 gap-4 xl:gap-5">
                 {jobs.map((job) => (
                   <JobCard
                     key={job.id}
@@ -844,7 +846,7 @@ export default function JobsPage() {
       fallback={
         <div className="min-h-screen flex flex-col bg-stormy-canvas text-stormy-main">
           <Navbar />
-          <main className="w-full max-w-[1760px] mx-auto px-4 py-16 text-center">
+          <main className="w-full px-4 sm:px-6 lg:px-8 py-16 text-center">
             <div className="w-8 h-8 mx-auto border-2 border-stormy-sky border-t-transparent rounded-full animate-spin" />
           </main>
         </div>

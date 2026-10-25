@@ -43,24 +43,21 @@ function NavbarContent() {
     if (href === '/notifications') {
       return pathname === '/notifications' || pathname.startsWith('/notifications/');
     }
-    if (href === '/admin') {
-      return pathname.startsWith('/admin');
-    }
     return pathname === href;
   };
 
   const getDesktopNavLinkClass = (href) => {
     const active = isNavActive(href);
     return active
-      ? 'px-3 py-1.5 rounded-lg text-sm font-bold text-stormy-dark bg-stormy-sky/20 border border-stormy-sky/40 transition-colors shadow-2xs'
-      : 'px-3 py-1.5 rounded-lg text-sm font-medium text-stormy-muted hover:text-stormy-dark hover:bg-stormy-canvas transition-colors';
+      ? 'px-3.5 py-1.5 rounded-lg text-sm font-bold text-white bg-stormy-dark shadow-xs transition-colors'
+      : 'px-3.5 py-1.5 rounded-lg text-sm font-medium text-stormy-muted hover:text-stormy-dark hover:bg-stormy-canvas transition-colors';
   };
 
   const getMobileNavLinkClass = (href) => {
     const active = isNavActive(href);
     return active
-      ? 'block px-3 py-2 rounded-lg text-sm font-bold bg-stormy-sky/20 text-stormy-dark border border-stormy-sky/30'
-      : 'block px-3 py-2 rounded-lg text-sm font-medium text-stormy-muted hover:text-stormy-dark hover:bg-stormy-canvas';
+      ? 'block px-3.5 py-2.5 rounded-lg text-sm font-bold bg-stormy-dark text-white shadow-xs'
+      : 'block px-3.5 py-2.5 rounded-lg text-sm font-medium text-stormy-muted hover:text-stormy-dark hover:bg-stormy-canvas transition-colors';
   };
 
   const handleLogout = async () => {
@@ -92,7 +89,7 @@ function NavbarContent() {
 
   return (
     <header className="sticky top-0 z-40 w-full bg-white border-b border-stormy-border">
-      <div className="w-full max-w-[1760px] mx-auto px-4 sm:px-6 lg:px-8">
+      <div className="w-full px-4 sm:px-6 lg:px-8">
         <div className="flex items-center justify-between h-16">
           {/* Logo & Brand */}
           <div className="flex items-center gap-6 xl:gap-8">
@@ -129,19 +126,6 @@ function NavbarContent() {
                   </Link>
                 </>
               )}
-              {isAuthenticated && user?.role === 'ADMIN' && (
-                <Link
-                  href="/admin"
-                  className={
-                    isNavActive('/admin')
-                      ? 'px-3 py-1.5 rounded-lg text-sm font-bold text-stormy-dark bg-stormy-sky/30 border border-stormy-sky/50 flex items-center gap-1.5 shadow-2xs'
-                      : 'px-3 py-1.5 rounded-lg text-sm font-semibold text-stormy-sky hover:text-stormy-skyHover hover:bg-stormy-sky/10 transition-colors flex items-center gap-1.5'
-                  }
-                >
-                  <span className="w-1.5 h-1.5 rounded-full bg-stormy-sky" />
-                  Admin Console
-                </Link>
-              )}
             </nav>
           </div>
 
@@ -154,7 +138,7 @@ function NavbarContent() {
                 <NotificationBell />
 
                 <Link
-                  href={user?.role === 'ADMIN' ? '/admin' : '/profile'}
+                  href="/profile"
                   className="flex items-center gap-2.5 p-1.5 rounded-lg hover:bg-stormy-canvas transition-colors text-left"
                 >
                   <div className="w-8 h-8 rounded-full bg-stormy-mist/50 border border-stormy-mist flex items-center justify-center text-xs font-semibold text-stormy-dark overflow-hidden shrink-0">
@@ -174,9 +158,6 @@ function NavbarContent() {
                   <div className="flex flex-col">
                     <span className="text-xs font-semibold text-stormy-main leading-tight line-clamp-1 max-w-[140px]">
                       {displayName}
-                    </span>
-                    <span className="text-[10px] uppercase font-bold text-stormy-slate tracking-wider">
-                      {user.role}
                     </span>
                   </div>
                 </Link>
@@ -295,19 +276,6 @@ function NavbarContent() {
                   <span>My Profile ({displayName})</span>
                 </div>
               </Link>
-              {user?.role === 'ADMIN' && (
-                <Link
-                  href="/admin"
-                  onClick={() => setIsMobileMenuOpen(false)}
-                  className={
-                    isNavActive('/admin')
-                      ? 'block px-3 py-2 rounded-lg text-sm font-bold bg-stormy-sky/30 text-stormy-dark border border-stormy-sky/40'
-                      : 'block px-3 py-2 rounded-lg text-sm font-bold text-stormy-sky hover:text-stormy-skyHover hover:bg-stormy-sky/10'
-                  }
-                >
-                  Admin Console &rarr;
-                </Link>
-              )}
               <div className="pt-2 border-t border-stormy-border">
                 <Button
                   variant="outline"
@@ -358,7 +326,7 @@ function NavbarContent() {
 function NavbarFallback() {
   return (
     <header className="sticky top-0 z-40 w-full bg-white border-b border-stormy-border">
-      <div className="w-full max-w-[1760px] mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
+      <div className="w-full px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
         <div className="flex items-center gap-2">
           <div className="w-8 h-8 rounded-lg bg-stormy-dark flex items-center justify-center text-stormy-sky font-bold text-lg">
             J

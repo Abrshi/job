@@ -59,6 +59,7 @@ const envSchema = z.object({
   DATABASE_URL: z.string().min(1, 'DATABASE_URL is required'),
   DB_PROVIDER: z.enum(['mysql', 'mariadb', 'postgres', 'postgresql']).optional(),
   FRONTEND_ORIGIN: z.string().default('http://localhost:3000'),
+  ADMIN_FRONTEND_ORIGIN: z.string().default('http://localhost:3001'),
   ACCESS_TOKEN_SECRET: z.string().min(16, 'ACCESS_TOKEN_SECRET must be at least 16 characters'),
   REFRESH_TOKEN_SECRET: z.string().min(16, 'REFRESH_TOKEN_SECRET must be at least 16 characters'),
   ACCESS_TOKEN_EXPIRES_IN: z.string().default('15m'),
@@ -80,6 +81,10 @@ const envSchema = z.object({
   GOOGLE_APP_PASSWORD: z.string().optional(),
   SMS_DEVICE_TOKEN: z.string().optional(),
   SMS_API_URL: z.string().default('https://sms-connect.vercel.app'),
+  ENABLE_SCHEDULER: z
+    .enum(['true', 'false'])
+    .default('false')
+    .transform((val) => val === 'true'),
 });
 
 export type Env = z.infer<typeof envSchema>;

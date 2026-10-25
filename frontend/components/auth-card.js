@@ -141,16 +141,12 @@ export function AuthCard({ initialTab = 'login' }) {
         return;
       }
 
-      let target = loggedUser?.role === 'ADMIN' ? '/admin' : '/jobs';
+      let target = '/jobs';
       if (typeof window !== 'undefined') {
         const params = new URLSearchParams(window.location.search);
         const returnUrl = params.get('returnUrl');
-        if (returnUrl && returnUrl.startsWith('/') && !returnUrl.startsWith('//')) {
-          if (returnUrl.startsWith('/admin') && loggedUser?.role !== 'ADMIN') {
-            target = '/jobs';
-          } else {
-            target = returnUrl;
-          }
+        if (returnUrl && returnUrl.startsWith('/') && !returnUrl.startsWith('//') && !returnUrl.startsWith('/admin')) {
+          target = returnUrl;
         }
       }
 
@@ -244,8 +240,7 @@ export function AuthCard({ initialTab = 'login' }) {
       }
 
       setTimeout(() => {
-        const dest = user?.role === 'ADMIN' ? '/admin' : '/jobs';
-        router.push(dest);
+        router.push('/jobs');
       }, 1500);
     } catch (err) {
       setVerificationError(err.message || 'Invalid or expired verification code.');
@@ -303,9 +298,6 @@ export function AuthCard({ initialTab = 'login' }) {
   if (isAuthenticated && !authLoading && user && user.isEmailVerified && !justRegistered && activeTab !== 'verify-email') {
     const fullName = [user.firstName, user.lastName].filter(Boolean).join(' ') || 'User';
     const initial = (user.firstName || user.email).charAt(0).toUpperCase();
-    const isAdmin = user.role === 'ADMIN';
-    const dashboardHref = isAdmin ? '/admin' : '/jobs';
-    const dashboardLabel = isAdmin ? 'Go to Admin Console' : 'Go to Job Opportunities';
 
     return (
       <div className="w-full bg-white border border-stormy-border rounded-2xl p-6 sm:p-8 shadow-card space-y-6">
@@ -314,32 +306,21 @@ export function AuthCard({ initialTab = 'login' }) {
             {initial}
           </div>
           <div>
-            <div className="flex items-center gap-2">
-              <h3 className="text-lg font-bold text-stormy-main tracking-tight">
-                Welcome back, {fullName}
-              </h3>
-              <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold uppercase ${
-                isAdmin
-                  ? 'bg-stormy-sky text-stormy-dark border border-stormy-sky'
-                  : 'bg-stormy-mist/40 text-stormy-dark border border-stormy-mist'
-              }`}>
-                {user.role}
-              </span>
-            </div>
+            <h3 className="text-lg font-bold text-stormy-main tracking-tight">
+              Welcome back, {fullName}
+            </h3>
             <p className="text-xs text-stormy-muted mt-0.5">{user.email}</p>
           </div>
         </div>
 
         <Alert variant="success">
-          {isAdmin
-            ? 'Your administrator credentials are confirmed. You have full access to platform governance and controls.'
-            : 'Your account is verified and active. You have full access to personalized job matching.'}
+          Your account is verified and active. You have full access to personalized job matching.
         </Alert>
 
         <div className="space-y-3 pt-2">
-          <Link href={dashboardHref} className="block w-full">
+          <Link href="/jobs" className="block w-full">
             <Button variant="primary" size="md" className="w-full">
-              {dashboardLabel}
+              Go to Job Opportunities
             </Button>
           </Link>
           <Button variant="outline" size="md" className="w-full" onClick={logout}>
@@ -486,8 +467,7 @@ export function AuthCard({ initialTab = 'login' }) {
                     size="md"
                     className="w-full"
                     onClick={() => {
-                      const dest = user?.role === 'ADMIN' ? '/admin' : '/jobs';
-                      router.push(dest);
+                      router.push('/jobs');
                     }}
                   >
                     Continue to Dashboard &rarr;
@@ -589,8 +569,7 @@ export function AuthCard({ initialTab = 'login' }) {
                   <button
                     type="button"
                     onClick={() => {
-                      const dest = user?.role === 'ADMIN' ? '/admin' : '/jobs';
-                      router.push(dest);
+                      router.push('/jobs');
                     }}
                     className="text-stormy-muted hover:text-stormy-dark transition-colors cursor-pointer block w-full text-center"
                   >

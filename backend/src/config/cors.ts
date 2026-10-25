@@ -8,7 +8,7 @@ export const corsOptions: CorsOptions = {
       return callback(null, true);
     }
 
-    const allowedOrigins = [env.FRONTEND_ORIGIN];
+    const allowedOrigins = [env.FRONTEND_ORIGIN, env.ADMIN_FRONTEND_ORIGIN].filter(Boolean);
     if (allowedOrigins.includes(origin) || env.NODE_ENV === 'development') {
       callback(null, true);
     } else {

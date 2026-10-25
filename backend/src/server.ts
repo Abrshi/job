@@ -13,15 +13,22 @@ const server = app.listen(env.PORT, () => {
     logger.warn(`Initial database connection warmup notice: ${(err as Error).message || err}`);
   });
 
-  // Start background job source scheduler
-  sourceScheduler.start();
+  // Start background job source scheduler only if enabled for this instance
+  if (env.ENABLE_SCHEDULER) {
+    logger.info('Background job source scheduler is enabled on this instance.');
+    sourceScheduler.start();
+  } else {
+    logger.info('Background job source scheduler is disabled on this instance (handled by admin backend).');
+  }
 });
 
 const handleShutdown = async (signal: string) => {
   logger.info(`Received ${signal}. Starting graceful shutdown...`);
 
-  // Stop dynamic scheduler timer
-  sourceScheduler.stop();
+  // Stop dynamic scheduler timer if running
+  if (sourceScheduler.isRunning) {
+    sourceScheduler.stop();
+  }
 
   server.close(async () => {
     logger.info('HTTP server closed.');

@@ -12,8 +12,7 @@ export default function LoginPage() {
   useEffect(() => {
     // Only redirect if authenticated AND email has been verified
     if (!loading && isAuthenticated && user && user.isEmailVerified) {
-      const target = user.role === 'ADMIN' ? '/admin' : '/jobs';
-      router.replace(target);
+      router.replace('/jobs');
     }
   }, [loading, isAuthenticated, user, router]);
 

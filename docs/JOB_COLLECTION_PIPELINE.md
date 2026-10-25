@@ -173,7 +173,48 @@ Execution history and observability metrics for data ingestion passes.
 
 ---
 
-## 5. Normalization & Deduplication Strategy
+## 5. Ethiojobs Integration Architecture & Adapter Implementation
+
+### Endpoint Investigation Findings
+- **Target Endpoint:** `GET https://ethiojobs.net/_next/data/<buildId>/en/jobs.json?page=<pageNumber>&isFeatured=false`
+- **Protocol:** HTTP GET (Next.js Data Route)
+- **Observed Response Structure:**
+  - `pageProps.jobs.data`: Array of 12 job items per page
+  - `pageProps.jobs.meta`: Pagination metadata (`pageNumber`, `itemsPerPage`, `lastPage`, `total`)
+  - `pageProps.token`: Server-generated internal API token
+- **Dynamic Next.js `buildId` Resolution:**
+  - `buildId` dynamically extracted from `<script id="__NEXT_DATA__">` on `https://ethiojobs.net/en/jobs`.
+  - Cached in memory for 1 hour; invalidated and refreshed automatically on HTTP 404 responses.
+- **Architectural Guardrails & Compliance:**
+  - Seeded in an **inactive** state (`isActive: false`) with slug `ethiojobs` and 120-minute polling period.
+  - Never logs or exposes tokens or sensitive response headers.
+  - Uses bounded exponential backoff (up to 3 retries) and 20-second timeout with `AbortController`.
+  - Bounded pagination stopping when `pageNumber >= lastPage` or data array is empty.
+
+### Field Mapping Specification
+
+| Ethiojobs Field | Canonical `Job` Field | Transformation / Normalization |
+|---|---|---|
+| `id` | `externalId` | Preserved as exact source string identifier |
+| `id` | `fingerprint` | Stable hash `ext:<id>` preventing duplicates |
+| `title` | `originalTitle` & `normalizedTitle` | Preserved in original; HTML stripped and whitespace collapsed |
+| `description` | `originalDescription` & `normalizedDescription` | HTML preserved in original; sanitized and stripped in normalized |
+| `company.name` | `companyName` | Normalized employer organization name |
+| `state` | `city` | State or region name (e.g. "Addis Ababa", "Oromia") |
+| N/A | `country` | Defaults to `"Ethiopia"` |
+| `location_type` | `isRemote` & `workArrangement` | `Remote` -> `REMOTE`, `Hybrid` -> `HYBRID`, `Office` -> `ON_SITE` |
+| `type` | `employmentType` | `8` -> `FULL_TIME`, `13` -> `CONTRACT` / `FREELANCE`; fallback textual heuristics |
+| `level` | `experienceLevel` | `1` -> `ENTRY`, `2` -> `JUNIOR`, `3` -> `MID`, `4` -> `SENIOR`; strict textual fallback |
+| `date_published` | `publishedAt` | ISO 8601 timestamp parsed to `Date` |
+| `date_expiry` | `closingDate` | Vacancy deadline timestamp |
+| `slug` | `originalUrl` | `https://ethiojobs.net/jobs/<slug>` |
+| `application_email` / `application_form` / `career_page_link` | `applicationUrl` | Direct URL or `mailto:<email>`. `null` if unavailable |
+| `catalogs` | Taxonomy hint in `rawPayload` | Passed into classification hints and audit payload |
+| Raw object | `rawPayload` | Full JSON object stored for auditing and source fidelity |
+
+---
+
+## 6. Normalization & Deduplication Strategy
 
 ### Fingerprint Precedence
 1. **External ID:** If the provider provides an explicit vacancy ID:
