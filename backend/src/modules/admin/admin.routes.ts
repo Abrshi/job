@@ -15,9 +15,21 @@ import {
 
 const router = Router();
 
-// Enforce authentication & ADMIN role across all admin routes
+// ============================================================================
+// Public Admin Authentication Endpoints (Unprotected by Bearer token)
+// ============================================================================
+router.post('/auth/login', adminController.login);
+router.post('/auth/refresh', adminController.refresh);
+router.post('/auth/logout', adminController.logout);
+
+// ============================================================================
+// Protected Admin Endpoints (Enforce authentication & ADMIN role)
+// ============================================================================
 router.use(authenticate);
 router.use(authorize('ADMIN'));
+
+// Verify active admin session
+router.get('/auth/verify', adminController.verify);
 
 // 1. Dashboard
 router.get('/dashboard/stats', adminController.getStats);

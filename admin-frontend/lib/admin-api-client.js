@@ -78,10 +78,10 @@ class AdminApiClient {
 
         if (!response.ok) {
           const errData = await response.json().catch(() => null);
-          throw new AdminApiError(
-            errData?.message || 'Admin refresh session invalid or expired',
-            { status: response.status, code: errData?.code || 'INVALID_ADMIN_REFRESH_TOKEN' }
-          );
+          const message =
+            errData?.error?.message || errData?.message || 'Admin refresh session invalid or expired';
+          const code = errData?.error?.code || errData?.code || 'INVALID_ADMIN_REFRESH_TOKEN';
+          throw new AdminApiError(message, { status: response.status, code });
         }
 
         const data = await response.json();
@@ -142,11 +142,14 @@ class AdminApiClient {
 
     if (!response.ok) {
       const errData = await response.json().catch(() => null);
-      const message = errData?.message || `Request failed with status ${response.status}`;
+      const message =
+        errData?.error?.message || errData?.message || `Request failed with status ${response.status}`;
+      const code = errData?.error?.code || errData?.code || 'REQUEST_FAILED';
+      const details = errData?.error?.details || errData?.details || [];
       throw new AdminApiError(message, {
         status: response.status,
-        code: errData?.code || 'REQUEST_FAILED',
-        details: errData?.details || [],
+        code,
+        details,
       });
     }
 
