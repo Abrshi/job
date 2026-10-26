@@ -214,7 +214,50 @@ Execution history and observability metrics for data ingestion passes.
 
 ---
 
-## 6. Normalization & Deduplication Strategy
+## 6. GeezJobs Integration Architecture & Adapter Implementation
+
+### Endpoint Investigation Findings
+- **Target Search Endpoint:** `GET https://geezjobs.com/search-jobs?page=<pageNumber>`
+- **Target Detail Endpoint:** `GET https://geezjobs.com/job-detail/<slug>`
+- **Sitemap Index:** `GET https://geezjobs.com/sitemap-detail`
+- **Protocol:** HTTP GET over TLS (HTML with Tailwind & Schema.org JSON-LD)
+- **Observed Response Structure:**
+  - Search page embeds `ItemList` JSON-LD and HTML job cards.
+  - Detail page embeds comprehensive `schema.org/JobPosting` JSON-LD.
+- **Hostinger CDN Challenge & Networking:**
+  - Requests require `Cookie: gj_ok=1` and modern `User-Agent`.
+  - Node `https.Agent` configured with `family: 4` (`dns.lookup(hostname, { ...opts, family: 4 }, cb)`) and `keepAlive: true` to prevent IPv6 timeouts on Linux hosts.
+- **Architectural Guardrails & Compliance:**
+  - Seeded in an **inactive** state (`isActive: false`) with slug `geezjobs` and 120-minute polling period.
+  - Bounded concurrency (3 parallel requests) and polite throttling between chunks.
+
+### Field Mapping Specification
+
+| GeezJobs Field | Canonical `Job` Field | Transformation / Normalization |
+|---|---|---|
+| `identifier.value` / `slug` | `externalId` | Preserved as exact source slug identifier |
+| `identifier.value` / `slug` | `fingerprint` | Stable hash `ext:<externalId>` preventing duplicates |
+| `title` | `originalTitle` & `normalizedTitle` | Trailing `" via GeezJobs"` stripped; HTML stripped and whitespace collapsed |
+| `description` | `originalDescription` & `normalizedDescription` | HTML preserved in original; sanitized and stripped in normalized |
+| `hiringOrganization.name` | `companyName` | Normalized employer organization name |
+| `jobLocation.address.addressLocality` / `streetAddress` | `city` | State or region name (e.g. "Addis Ababa", "Hawassa") |
+| `jobLocation.address.addressCountry` | `country` | Defaults to `"Ethiopia"` |
+| `workHours` / text keywords | `isRemote` & `workArrangement` | `Remote` -> `REMOTE`, `Hybrid` -> `HYBRID`, else `ON_SITE` |
+| `employmentType` | `employmentType` | `FULL_TIME`, `PART_TIME`, `CONTRACT`, `INTERNSHIP`, `FREELANCE` |
+| Experience badges / text | `experienceLevel` | Parsed years: `ENTRY`, `JUNIOR`, `MID`, `SENIOR`, `LEAD`, `EXECUTIVE`, `UNSPECIFIED` |
+| `baseSalary.value.minValue` | `salaryMin` | Decimal minimum salary |
+| `baseSalary.value.maxValue` | `salaryMax` | Decimal maximum salary |
+| `baseSalary.currency` | `salaryCurrency` | E.g. `"ETB"` |
+| `baseSalary.unitText` | `salaryPeriod` | `"MONTH"` -> `MONTHLY`, `"YEAR"` -> `YEARLY`, `"HOUR"` -> `HOURLY` |
+| `datePosted` | `publishedAt` | ISO 8601 timestamp parsed to `Date` |
+| `validThrough` | `closingDate` | Vacancy deadline timestamp |
+| `url` | `originalUrl` | `https://geezjobs.com/job-detail/<slug>` |
+| Apply section email / URL | `applicationUrl` | Direct URL or `mailto:<email>`. `null` if unavailable |
+| Raw object | `rawPayload` | Full JSON object stored for auditing and source fidelity |
+
+---
+
+## 7. Normalization & Deduplication Strategy
 
 ### Fingerprint Precedence
 1. **External ID:** If the provider provides an explicit vacancy ID:

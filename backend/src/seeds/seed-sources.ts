@@ -70,5 +70,27 @@ export async function seedSources(): Promise<{ createdCount: number }> {
     logger.info('Ethiojobs source already exists. Skipping creation.');
   }
 
+  // 4. GeezJobs
+  const geezExisting = await prisma.jobSource.findUnique({
+    where: { slug: 'geezjobs' },
+  });
+
+  if (!geezExisting) {
+    await prisma.jobSource.create({
+      data: {
+        name: 'GeezJobs',
+        slug: 'geezjobs',
+        type: 'SCRAPER',
+        endpointUrl: 'https://geezjobs.com/search-jobs',
+        isActive: false, // Disabled by default pending official permission verification
+        pollingInterval: 120, // 2 hours
+      },
+    });
+    logger.info('GeezJobs source created successfully (disabled by default pending confirmation).');
+    createdCount++;
+  } else {
+    logger.info('GeezJobs source already exists. Skipping creation.');
+  }
+
   return { createdCount };
 }

@@ -75,6 +75,7 @@ function JobsContent() {
           setSources([
             { slug: 'hahujobs', name: 'HaHuJobs' },
             { slug: 'ethiojobs', name: 'Ethiojobs' },
+            { slug: 'geezjobs', name: 'GeezJobs' },
             { slug: 'afriwork', name: 'Afriwork' },
           ]);
         }
@@ -83,6 +84,7 @@ function JobsContent() {
         setSources([
           { slug: 'hahujobs', name: 'HaHuJobs' },
           { slug: 'ethiojobs', name: 'Ethiojobs' },
+          { slug: 'geezjobs', name: 'GeezJobs' },
           { slug: 'afriwork', name: 'Afriwork' },
         ]);
       }

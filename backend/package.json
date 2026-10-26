@@ -16,6 +16,7 @@
     "seed": "tsx src/seeds/index.ts",
     "sync:hahujobs": "tsx scripts/sync-hahujobs.ts",
     "sync:ethiojobs": "tsx scripts/sync-ethiojobs.ts",
+    "sync:geezjobs": "tsx scripts/sync-geezjobs.ts",
     "reclassify": "tsx scripts/reclassify-jobs.ts",
     "test": "NODE_ENV=test tsx --test \"tests/**/*.test.ts\""
   },
