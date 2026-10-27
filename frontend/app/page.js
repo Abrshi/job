@@ -40,7 +40,15 @@ export default function Home() {
                 </a>
                 <a
                   href="#auth-card"
-                  className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl border border-stormy-border bg-white hover:border-stormy-slate text-xs font-semibold text-stormy-dark transition-colors"
+                  onClick={(e) => {
+                    e.preventDefault();
+                    const el = document.getElementById('auth-card');
+                    if (el) {
+                      el.scrollIntoView({ behavior: 'smooth' });
+                      setTimeout(() => el.querySelector('input')?.focus(), 300);
+                    }
+                  }}
+                  className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl border border-stormy-border bg-white hover:border-stormy-slate text-xs font-semibold text-stormy-dark transition-colors cursor-pointer"
                 >
                   Sign In / Register
                 </a>

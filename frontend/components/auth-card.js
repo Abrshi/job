@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/hooks/use-auth';
@@ -16,6 +16,12 @@ export function AuthCard({ initialTab = 'login' }) {
   // Active view: 'login' | 'register' | 'verify-email' | 'forgot-password'
   const [activeTab, setActiveTab] = useState(initialTab);
   const [justRegistered, setJustRegistered] = useState(false);
+  const [isMounted, setIsMounted] = useState(false);
+
+  // Synchronize activeTab whenever initialTab prop changes (e.g. route transitions)
+  useEffect(() => {
+    setActiveTab(initialTab);
+  }, [initialTab]);
 
   // --- Sign In State ---
   const [loginEmail, setLoginEmail] = useState('');
@@ -47,13 +53,45 @@ export function AuthCard({ initialTab = 'login' }) {
   const [resendStatus, setResendStatus] = useState(null);
   const [isResendingCode, setIsResendingCode] = useState(false);
 
-  // --- Frontend-Only Forgot Password State ---
+  // --- Forgot Password State ---
   const [forgotEmail, setForgotEmail] = useState('');
   const [forgotError, setForgotError] = useState(null);
   const [isSendingForgot, setIsSendingForgot] = useState(false);
   const [forgotSuccess, setForgotSuccess] = useState(false);
 
-  // Check URL query parameters on mount (supports email link verification inside the sign in window)
+  // Enable animation after hydration
+  useEffect(() => {
+    setIsMounted(true);
+  }, []);
+
+  // Switch tab with internal navigation sync
+  const switchTab = useCallback((tab) => {
+    setActiveTab(tab);
+    if (tab === 'login' || tab === 'register') {
+      setJustRegistered(false);
+      if (typeof window !== 'undefined') {
+        const pathname = window.location.pathname;
+        if (pathname === '/login' && tab === 'register') {
+          router.replace('/register');
+        } else if (pathname === '/register' && tab === 'login') {
+          router.replace('/login');
+        }
+      }
+    }
+  }, [router]);
+
+  // Listen to custom tab change events (e.g. from navbar "Get Started" or "Sign In")
+  useEffect(() => {
+    const handleSwitchEvent = (e) => {
+      if (e?.detail) {
+        switchTab(e.detail);
+      }
+    };
+    window.addEventListener('authcard-switch-tab', handleSwitchEvent);
+    return () => window.removeEventListener('authcard-switch-tab', handleSwitchEvent);
+  }, [switchTab]);
+
+  // Check URL query parameters on mount (supports email link verification inside the card)
   useEffect(() => {
     if (typeof window !== 'undefined') {
       const params = new URLSearchParams(window.location.search);
@@ -131,7 +169,6 @@ export function AuthCard({ initialTab = 'login' }) {
     try {
       const loggedUser = await login(loginEmail, loginPassword);
 
-      // If user is unverified, prompt verification inside the window
       if (loggedUser && !loggedUser.isEmailVerified) {
         setVerificationEmail(loginEmail);
         setVerificationCode('');
@@ -161,7 +198,7 @@ export function AuthCard({ initialTab = 'login' }) {
     }
   };
 
-  // Register Handler: immediately switches this window to Verification Menu
+  // Register Handler: switches smoothly to Verification Menu
   const handleRegisterSubmit = async (e) => {
     e.preventDefault();
     setRegSubmitError(null);
@@ -198,7 +235,6 @@ export function AuthCard({ initialTab = 'login' }) {
         role: regForm.role,
       });
 
-      // Switch to Verification Menu inside this same sign in window
       setJustRegistered(true);
       setVerificationEmail(regForm.email);
       setVerificationCode('');
@@ -277,7 +313,7 @@ export function AuthCard({ initialTab = 'login' }) {
     }
   };
 
-  // Frontend-only Forgot Password Handler
+  // Forgot Password Handler
   const handleForgotSubmit = (e) => {
     e.preventDefault();
     setForgotError(null);
@@ -294,30 +330,37 @@ export function AuthCard({ initialTab = 'login' }) {
     }, 600);
   };
 
-  // If already authenticated and email is verified, show friendly profile card
+  // If already authenticated and email is verified, render profile card maintaining constant container size
   if (isAuthenticated && !authLoading && user && user.isEmailVerified && !justRegistered && activeTab !== 'verify-email') {
     const fullName = [user.firstName, user.lastName].filter(Boolean).join(' ') || 'User';
     const initial = (user.firstName || user.email).charAt(0).toUpperCase();
 
     return (
-      <div className="w-full bg-white border border-stormy-border rounded-2xl p-6 sm:p-8 shadow-card space-y-6">
-        <div className="flex items-center gap-4">
-          <div className="w-14 h-14 rounded-2xl bg-stormy-mist/50 border border-stormy-mist flex items-center justify-center text-xl font-bold text-stormy-dark">
-            {initial}
+      <div className="w-full max-w-md h-[610px] max-h-[calc(100dvh-2rem)] bg-white border border-stormy-border rounded-2xl shadow-card overflow-hidden flex flex-col justify-between p-6 sm:p-8">
+        <div className="space-y-6">
+          <div className="flex items-center gap-4">
+            <div className="w-14 h-14 rounded-2xl bg-stormy-mist/50 border border-stormy-mist flex items-center justify-center text-xl font-bold text-stormy-dark">
+              {initial}
+            </div>
+            <div>
+              <h3 className="text-lg font-bold text-stormy-main tracking-tight">
+                Welcome back, {fullName}
+              </h3>
+              <p className="text-xs text-stormy-muted mt-0.5">{user.email}</p>
+            </div>
           </div>
-          <div>
-            <h3 className="text-lg font-bold text-stormy-main tracking-tight">
-              Welcome back, {fullName}
-            </h3>
-            <p className="text-xs text-stormy-muted mt-0.5">{user.email}</p>
+
+          <Alert variant="success">
+            Your account is verified and active. You have full access to personalized job matching.
+          </Alert>
+
+          <div className="rounded-xl bg-stormy-canvas/70 border border-stormy-border/70 p-4 space-y-2 text-xs text-stormy-muted">
+            <div className="font-semibold text-stormy-main">Your Session is Active</div>
+            <p>Access your saved searches, application tracker, and customized AI document generation tools.</p>
           </div>
         </div>
 
-        <Alert variant="success">
-          Your account is verified and active. You have full access to personalized job matching.
-        </Alert>
-
-        <div className="space-y-3 pt-2">
+        <div className="space-y-3 pt-4 border-t border-stormy-border">
           <Link href="/jobs" className="block w-full">
             <Button variant="primary" size="md" className="w-full">
               Go to Job Opportunities
@@ -331,271 +374,115 @@ export function AuthCard({ initialTab = 'login' }) {
     );
   }
 
+  const isSubView = activeTab === 'verify-email' || activeTab === 'forgot-password';
+
   return (
-    <div className="w-full bg-white border border-stormy-border rounded-2xl shadow-card overflow-hidden">
-      {/* Top Header & Navigation */}
-      <div className="px-6 pt-6 pb-2 border-b border-stormy-border/60 bg-stormy-canvas/40">
-        {activeTab === 'verify-email' ? (
-          <div className="flex items-center justify-between pb-2">
+    <div className="w-full max-w-md h-[710px] max-h-[calc(100dvh-2rem)] bg-white border border-stormy-border rounded-2xl shadow-card overflow-hidden flex flex-col relative">
+      {/* ==================================================== */}
+      {/* 1. TOP HEADER & SWITCHER (CONSTANT FIXED HEIGHT)     */}
+      {/* ==================================================== */}
+      <div className="shrink-0 px-6 pt-4 pb-3 border-b border-stormy-border/60 bg-stormy-canvas/40 relative">
+        <div className="relative h-10 w-full overflow-hidden">
+          {/* Main Primary Tab Bar (Sign In / Create Account) */}
+          <div
+            className={`absolute inset-0 ${
+              isMounted ? 'transition-all duration-300 ease-[cubic-bezier(0.16,1,0.3,1)]' : ''
+            }`}
+            style={{
+              opacity: isSubView ? 0 : 1,
+              transform: isSubView ? 'translateY(-10px)' : 'translateY(0)',
+              pointerEvents: isSubView ? 'none' : 'auto',
+            }}
+          >
+            <div className="relative flex bg-stormy-canvas p-1 rounded-xl border border-stormy-border h-full">
+              {/* Sliding Active Pill Indicator */}
+              <div
+                className={`absolute top-1 bottom-1 rounded-lg bg-white shadow-subtle border border-stormy-border/70 ${
+                  isMounted ? 'transition-transform duration-300 ease-[cubic-bezier(0.16,1,0.3,1)]' : ''
+                }`}
+                style={{
+                  width: 'calc(50% - 4px)',
+                  left: '4px',
+                  transform: activeTab === 'register' ? 'translateX(100%)' : 'translateX(0)',
+                }}
+              />
+
+              <button
+                type="button"
+                onClick={() => switchTab('login')}
+                className={`relative z-10 flex-1 py-1.5 text-xs font-semibold rounded-lg text-center transition-colors cursor-pointer flex items-center justify-center ${
+                  activeTab === 'login'
+                    ? 'text-stormy-dark'
+                    : 'text-stormy-muted hover:text-stormy-dark'
+                }`}
+              >
+                Sign In
+              </button>
+              <button
+                type="button"
+                onClick={() => switchTab('register')}
+                className={`relative z-10 flex-1 py-1.5 text-xs font-semibold rounded-lg text-center transition-colors cursor-pointer flex items-center justify-center ${
+                  activeTab === 'register'
+                    ? 'text-stormy-dark'
+                    : 'text-stormy-muted hover:text-stormy-dark'
+                }`}
+              >
+                Create Account
+              </button>
+            </div>
+          </div>
+
+          {/* Sub-view Header (Verify Email / Password Recovery) */}
+          <div
+            className={`absolute inset-0 flex items-center justify-between ${
+              isMounted ? 'transition-all duration-300 ease-[cubic-bezier(0.16,1,0.3,1)]' : ''
+            }`}
+            style={{
+              opacity: isSubView ? 1 : 0,
+              transform: isSubView ? 'translateY(0)' : 'translateY(10px)',
+              pointerEvents: isSubView ? 'auto' : 'none',
+            }}
+          >
             <div className="flex items-center gap-2">
               <button
                 type="button"
-                onClick={() => {
-                  setActiveTab('login');
-                  setJustRegistered(false);
-                  setVerificationError(null);
-                  setVerificationSuccess(false);
-                }}
-                className="p-1 -ml-1 text-stormy-muted hover:text-stormy-dark rounded-md transition-colors cursor-pointer"
+                onClick={() => switchTab('login')}
+                className="p-1 -ml-1 text-stormy-muted hover:text-stormy-dark rounded-md transition-colors cursor-pointer flex items-center gap-1 text-xs font-medium"
                 aria-label="Back to sign in"
               >
-                <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
                 </svg>
+                <span>Back</span>
               </button>
-              <span className="text-sm font-semibold text-stormy-main">
-                Email Verification
+              <span className="text-xs font-bold text-stormy-main">
+                {activeTab === 'verify-email' ? 'Email Verification' : 'Password Recovery'}
               </span>
             </div>
-            <span className="text-[11px] font-semibold px-2.5 py-0.5 rounded-full bg-blue-50 text-blue-700 border border-blue-200">
-              Verify Account
+            <span className="text-[11px] font-semibold px-2 py-0.5 rounded-full bg-blue-50 text-blue-700 border border-blue-200">
+              {activeTab === 'verify-email' ? 'Account Verify' : 'Reset Access'}
             </span>
           </div>
-        ) : activeTab === 'forgot-password' ? (
-          <div className="flex items-center gap-2 pb-2">
-            <button
-              type="button"
-              onClick={() => {
-                setActiveTab('login');
-                setForgotSuccess(false);
-              }}
-              className="p-1 -ml-1 text-stormy-muted hover:text-stormy-dark rounded-md transition-colors cursor-pointer"
-              aria-label="Back to sign in"
-            >
-              <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
-              </svg>
-            </button>
-            <span className="text-sm font-semibold text-stormy-main">
-              Password Recovery
-            </span>
-          </div>
-        ) : (
-          <div className="relative flex bg-stormy-canvas p-1 rounded-xl border border-stormy-border">
-            <div
-              className="absolute top-1 bottom-1 rounded-lg bg-white shadow-subtle border border-stormy-border/70 transition-all duration-300 ease-in-out"
-              style={{
-                width: 'calc(50% - 4px)',
-                left: activeTab === 'register' ? 'calc(50% + 2px)' : '4px',
-              }}
-            />
-
-            <button
-              type="button"
-              onClick={() => setActiveTab('login')}
-              className={`relative z-10 flex-1 py-2 text-xs font-semibold rounded-lg text-center transition-colors cursor-pointer ${
-                activeTab === 'login'
-                  ? 'text-stormy-dark'
-                  : 'text-stormy-muted hover:text-stormy-dark'
-              }`}
-            >
-              Sign In
-            </button>
-            <button
-              type="button"
-              onClick={() => setActiveTab('register')}
-              className={`relative z-10 flex-1 py-2 text-xs font-semibold rounded-lg text-center transition-colors cursor-pointer ${
-                activeTab === 'register'
-                  ? 'text-stormy-dark'
-                  : 'text-stormy-muted hover:text-stormy-dark'
-              }`}
-            >
-              Create Account
-            </button>
-          </div>
-        )}
+        </div>
       </div>
 
-      {/* Main Content Area: directly displays whichever view is active */}
-      <div className="w-full">
-        {/* ==================================================== */}
-        {/* 1. VERIFICATION VIEW (Active on register or verify)   */}
-        {/* ==================================================== */}
-        {activeTab === 'verify-email' && (
-          <div className="p-6 sm:p-7 space-y-4 animate-in fade-in duration-200">
-            <div>
-              <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-md text-[11px] font-semibold bg-blue-50 text-blue-700 border border-blue-200 mb-2">
-                <span className="w-1.5 h-1.5 rounded-full bg-blue-600 animate-pulse" />
-                Step 2: Account Activation
-              </div>
-              <h3 className="text-xl font-bold text-stormy-main tracking-tight">
-                Verify your email address
-              </h3>
-              <p className="text-xs text-stormy-muted mt-1">
-                We sent a 6-digit confirmation code to{' '}
-                <strong className="text-stormy-main font-semibold">
-                  {verificationEmail || 'your email'}
-                </strong>
-                .
-              </p>
-            </div>
-
-            {isVerifyingCode && !verificationCode ? (
-              <div className="text-center py-8 space-y-3">
-                <div className="w-8 h-8 border-3 border-stormy-sky border-t-transparent rounded-full animate-spin mx-auto" />
-                <p className="text-sm font-semibold text-stormy-main">Confirming verification link...</p>
-                <p className="text-xs text-stormy-muted">Please wait while we activate your account.</p>
-              </div>
-            ) : verificationSuccess ? (
-              <div className="space-y-4 text-center py-4">
-                <div className="w-12 h-12 bg-feedback-success-bg border border-feedback-success-border rounded-full flex items-center justify-center mx-auto text-feedback-success">
-                  <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 13l4 4L19 7" />
-                  </svg>
-                </div>
-
-                <div>
-                  <h4 className="text-base font-bold text-stormy-main">Email Successfully Verified!</h4>
-                  <p className="mt-1 text-xs text-stormy-muted">
-                    Your profile strength has received a <strong className="text-emerald-600 font-bold">+2.5%</strong> boost.
-                  </p>
-                </div>
-
-                <div className="space-y-2 pt-2">
-                  <Button
-                    variant="primary"
-                    size="md"
-                    className="w-full"
-                    onClick={() => {
-                      router.push('/jobs');
-                    }}
-                  >
-                    Continue to Dashboard &rarr;
-                  </Button>
-                </div>
-              </div>
-            ) : (
-              <form onSubmit={handleVerifyCodeSubmit} noValidate className="space-y-4">
-                {verificationError && (
-                  <Alert variant="danger" title="Verification error">
-                    {verificationError}
-                  </Alert>
-                )}
-
-                {resendStatus && (
-                  <Alert variant={resendStatus.type}>
-                    {resendStatus.message}
-                  </Alert>
-                )}
-
-                {!verificationEmail ? (
-                  <Input
-                    label="Account Email Address"
-                    id="verification-email-input"
-                    type="email"
-                    placeholder="name@example.com"
-                    value={verificationEmail}
-                    onChange={(e) => setVerificationEmail(e.target.value)}
-                    required
-                  />
-                ) : (
-                  <div className="flex items-center justify-between px-3 py-2 bg-stormy-mist/20 rounded-xl border border-stormy-border/60 text-xs">
-                    <div className="truncate">
-                      <span className="text-stormy-muted">Target email: </span>
-                      <strong className="text-stormy-main font-semibold">{verificationEmail}</strong>
-                    </div>
-                    <button
-                      type="button"
-                      onClick={() => setVerificationEmail('')}
-                      className="text-stormy-sky hover:text-stormy-skyHover text-[11px] font-semibold underline shrink-0 ml-2 cursor-pointer"
-                    >
-                      Change
-                    </button>
-                  </div>
-                )}
-
-                <div>
-                  <div className="flex items-center justify-between mb-1.5">
-                    <label className="block text-xs font-semibold text-stormy-dark">
-                      Enter 6-Digit Code
-                    </label>
-                  </div>
-                  <input
-                    type="text"
-                    inputMode="numeric"
-                    maxLength={6}
-                    placeholder="123456"
-                    value={verificationCode}
-                    onChange={(e) => {
-                      setVerificationCode(e.target.value.replace(/\D/g, '').slice(0, 6));
-                      if (verificationError) setVerificationError(null);
-                    }}
-                    className="w-full text-center tracking-[0.4em] font-mono text-2xl font-bold py-2.5 px-3 border border-stormy-border rounded-xl focus:outline-none focus:ring-2 focus:ring-stormy-sky focus:border-stormy-sky shadow-subtle text-stormy-main bg-white"
-                    required
-                    autoFocus
-                    disabled={isVerifyingCode}
-                  />
-                  <p className="text-[11px] text-stormy-muted mt-1.5 text-center">
-                    Enter the code from the email or click the link in your inbox.
-                  </p>
-                </div>
-
-                <Button
-                  type="submit"
-                  variant="primary"
-                  size="md"
-                  className="w-full"
-                  loading={isVerifyingCode}
-                  disabled={isVerifyingCode || verificationCode.length < 6}
-                >
-                  Verify Email Code
-                </Button>
-
-                <div className="pt-3 border-t border-stormy-border flex items-center justify-between text-xs">
-                  <span className="text-stormy-muted">Didn&apos;t receive it?</span>
-                  <button
-                    type="button"
-                    onClick={handleResendVerificationCode}
-                    disabled={verificationCooldown > 0 || isResendingCode || !verificationEmail}
-                    className="font-semibold text-stormy-sky hover:text-stormy-skyHover disabled:text-stormy-muted underline cursor-pointer"
-                  >
-                    {verificationCooldown > 0
-                      ? `Resend in ${verificationCooldown}s`
-                      : 'Resend Email Code'}
-                  </button>
-                </div>
-
-                <div className="pt-2 text-center text-xs space-y-1.5">
-                  <button
-                    type="button"
-                    onClick={() => {
-                      router.push('/jobs');
-                    }}
-                    className="text-stormy-muted hover:text-stormy-dark transition-colors cursor-pointer block w-full text-center"
-                  >
-                    Skip for now &amp; browse jobs &rarr;
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setActiveTab('login');
-                      setJustRegistered(false);
-                    }}
-                    className="text-stormy-muted hover:text-stormy-dark underline cursor-pointer block w-full text-center"
-                  >
-                    Return to Sign In
-                  </button>
-                </div>
-              </form>
-            )}
-          </div>
-        )}
-
-        {/* ==================================================== */}
-        {/* 2. SIGN IN VIEW                                      */}
-        {/* ==================================================== */}
-        {activeTab === 'login' && (
-          <div className="p-6 sm:p-7 space-y-5 animate-in fade-in duration-200">
+      {/* ==================================================== */}
+      {/* 2. MAIN CONSTANT-SIZE CONTENT CONTAINER              */}
+      {/* ==================================================== */}
+      <div className="relative flex-1 w-full overflow-hidden">
+        {/* PANEL 1: SIGN IN VIEW */}
+        <div
+          className={`absolute inset-0 w-full h-full p-6 sm:p-7 flex flex-col justify-between overflow-y-auto auth-panel-scroll ${
+            isMounted ? 'transition-all duration-300 ease-[cubic-bezier(0.16,1,0.3,1)]' : ''
+          }`}
+          style={{
+            transform: activeTab === 'login' ? 'translateX(0%)' : 'translateX(-40px)',
+            opacity: activeTab === 'login' ? 1 : 0,
+            pointerEvents: activeTab === 'login' ? 'auto' : 'none',
+            visibility: activeTab === 'login' ? 'visible' : 'hidden',
+          }}
+        >
+          <div className="space-y-4">
             <div>
               <h3 className="text-xl font-bold text-stormy-main tracking-tight">
                 Sign in to your account
@@ -611,7 +498,7 @@ export function AuthCard({ initialTab = 'login' }) {
               </Alert>
             )}
 
-            <form onSubmit={handleLoginSubmit} noValidate className="space-y-4">
+            <form onSubmit={handleLoginSubmit} noValidate className="space-y-3.5">
               <Input
                 label="Email address"
                 id="home-login-email"
@@ -649,7 +536,7 @@ export function AuthCard({ initialTab = 'login' }) {
                     type="button"
                     onClick={() => {
                       setVerificationEmail(loginEmail || '');
-                      setActiveTab('verify-email');
+                      switchTab('verify-email');
                     }}
                     className="font-medium text-stormy-sky hover:text-stormy-skyHover transition-colors cursor-pointer"
                   >
@@ -659,7 +546,7 @@ export function AuthCard({ initialTab = 'login' }) {
                     type="button"
                     onClick={() => {
                       setForgotEmail(loginEmail || '');
-                      setActiveTab('forgot-password');
+                      switchTab('forgot-password');
                     }}
                     className="font-medium text-stormy-slate hover:text-stormy-dark transition-colors cursor-pointer"
                   >
@@ -672,37 +559,60 @@ export function AuthCard({ initialTab = 'login' }) {
                 type="submit"
                 variant="primary"
                 size="md"
-                className="w-full mt-2"
+                className="w-full mt-1"
                 loading={isLoggingIn}
                 disabled={isLoggingIn}
               >
                 Sign In
               </Button>
             </form>
+          </div>
 
-            <div className="text-center text-xs text-stormy-muted pt-3 border-t border-stormy-border">
+          {/* Bottom Section: Security & Fast Switcher */}
+          <div className="space-y-3 pt-3">
+            <div className="rounded-xl bg-stormy-canvas/80 border border-stormy-border/70 p-2.5 flex items-center gap-2.5 text-xs text-stormy-muted">
+              <div className="w-7 h-7 rounded-lg bg-white border border-stormy-border/80 flex items-center justify-center shrink-0 text-stormy-slate shadow-xs">
+                <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+                </svg>
+              </div>
+              <div className="leading-tight text-[11px]">
+                <span className="font-semibold text-stormy-dark">Seamless multi-board aggregation</span>
+                <p className="text-stormy-muted mt-0.5">Instant matching with encrypted in-memory session protection.</p>
+              </div>
+            </div>
+
+            <div className="text-center text-xs text-stormy-muted pt-2 border-t border-stormy-border">
               Don&apos;t have an account yet?{' '}
               <button
                 type="button"
-                onClick={() => setActiveTab('register')}
+                onClick={() => switchTab('register')}
                 className="font-semibold text-stormy-dark hover:text-stormy-sky transition-colors cursor-pointer underline"
               >
                 Create one now
               </button>
             </div>
           </div>
-        )}
+        </div>
 
-        {/* ==================================================== */}
-        {/* 3. CREATE ACCOUNT VIEW                               */}
-        {/* ==================================================== */}
-        {activeTab === 'register' && (
-          <div className="p-6 sm:p-7 space-y-4 animate-in fade-in duration-200">
+        {/* PANEL 2: CREATE ACCOUNT (SIGN UP) VIEW */}
+        <div
+          className={`absolute inset-0 w-full h-full p-6 sm:p-7 flex flex-col justify-between overflow-y-auto auth-panel-scroll ${
+            isMounted ? 'transition-all duration-300 ease-[cubic-bezier(0.16,1,0.3,1)]' : ''
+          }`}
+          style={{
+            transform: activeTab === 'register' ? 'translateX(0%)' : 'translateX(40px)',
+            opacity: activeTab === 'register' ? 1 : 0,
+            pointerEvents: activeTab === 'register' ? 'auto' : 'none',
+            visibility: activeTab === 'register' ? 'visible' : 'hidden',
+          }}
+        >
+          <div className="space-y-3">
             <div>
               <h3 className="text-xl font-bold text-stormy-main tracking-tight">
                 Create an account
               </h3>
-              <p className="text-xs text-stormy-muted mt-1">
+              <p className="text-xs text-stormy-muted mt-0.5">
                 Free access across 50+ aggregated boards.
               </p>
             </div>
@@ -713,7 +623,7 @@ export function AuthCard({ initialTab = 'login' }) {
               </Alert>
             )}
 
-            <form onSubmit={handleRegisterSubmit} noValidate className="space-y-3">
+            <form onSubmit={handleRegisterSubmit} noValidate className="space-y-2.5">
               {/* Role Selector */}
               <div className="grid grid-cols-2 gap-2">
                 <button
@@ -820,25 +730,211 @@ export function AuthCard({ initialTab = 'login' }) {
                 Create Account
               </Button>
             </form>
-
-            <div className="text-center text-xs text-stormy-muted pt-2 border-t border-stormy-border">
-              Already have an account?{' '}
-              <button
-                type="button"
-                onClick={() => setActiveTab('login')}
-                className="font-semibold text-stormy-dark hover:text-stormy-sky transition-colors cursor-pointer underline"
-              >
-                Sign in
-              </button>
-            </div>
           </div>
-        )}
 
-        {/* ==================================================== */}
-        {/* 4. FORGOT PASSWORD VIEW                              */}
-        {/* ==================================================== */}
-        {activeTab === 'forgot-password' && (
-          <div className="p-6 sm:p-7 space-y-5 animate-in fade-in duration-200">
+          <div className="text-center text-xs text-stormy-muted pt-2 border-t border-stormy-border">
+            Already have an account?{' '}
+            <button
+              type="button"
+              onClick={() => switchTab('login')}
+              className="font-semibold text-stormy-dark hover:text-stormy-sky transition-colors cursor-pointer underline"
+            >
+              Sign in
+            </button>
+          </div>
+        </div>
+
+        {/* SUB-VIEW 1: EMAIL VERIFICATION (SLIDING OVERLAY) */}
+        <div
+          className={`absolute inset-0 w-full h-full bg-white z-20 flex flex-col justify-between p-6 sm:p-7 overflow-y-auto auth-panel-scroll ${
+            isMounted ? 'transition-all duration-300 ease-[cubic-bezier(0.16,1,0.3,1)]' : ''
+          }`}
+          style={{
+            transform: activeTab === 'verify-email' ? 'translateX(0%)' : 'translateX(40px)',
+            opacity: activeTab === 'verify-email' ? 1 : 0,
+            pointerEvents: activeTab === 'verify-email' ? 'auto' : 'none',
+            visibility: activeTab === 'verify-email' ? 'visible' : 'hidden',
+          }}
+        >
+          <div className="space-y-4">
+            <div>
+              <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-md text-[11px] font-semibold bg-blue-50 text-blue-700 border border-blue-200 mb-2">
+                <span className="w-1.5 h-1.5 rounded-full bg-blue-600 animate-pulse" />
+                Step 2: Account Activation
+              </div>
+              <h3 className="text-xl font-bold text-stormy-main tracking-tight">
+                Verify your email address
+              </h3>
+              <p className="text-xs text-stormy-muted mt-1">
+                We sent a 6-digit confirmation code to{' '}
+                <strong className="text-stormy-main font-semibold">
+                  {verificationEmail || 'your email'}
+                </strong>
+                .
+              </p>
+            </div>
+
+            {isVerifyingCode && !verificationCode ? (
+              <div className="text-center py-8 space-y-3">
+                <div className="w-8 h-8 border-3 border-stormy-sky border-t-transparent rounded-full animate-spin mx-auto" />
+                <p className="text-sm font-semibold text-stormy-main">Confirming verification link...</p>
+                <p className="text-xs text-stormy-muted">Please wait while we activate your account.</p>
+              </div>
+            ) : verificationSuccess ? (
+              <div className="space-y-4 text-center py-4">
+                <div className="w-12 h-12 bg-feedback-success-bg border border-feedback-success-border rounded-full flex items-center justify-center mx-auto text-feedback-success">
+                  <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 13l4 4L19 7" />
+                  </svg>
+                </div>
+
+                <div>
+                  <h4 className="text-base font-bold text-stormy-main">Email Successfully Verified!</h4>
+                  <p className="mt-1 text-xs text-stormy-muted">
+                    Your profile strength has received a <strong className="text-emerald-600 font-bold">+2.5%</strong> boost.
+                  </p>
+                </div>
+
+                <div className="space-y-2 pt-2">
+                  <Button
+                    variant="primary"
+                    size="md"
+                    className="w-full"
+                    onClick={() => {
+                      router.push('/jobs');
+                    }}
+                  >
+                    Continue to Dashboard &rarr;
+                  </Button>
+                </div>
+              </div>
+            ) : (
+              <form onSubmit={handleVerifyCodeSubmit} noValidate className="space-y-3.5">
+                {verificationError && (
+                  <Alert variant="danger" title="Verification error">
+                    {verificationError}
+                  </Alert>
+                )}
+
+                {resendStatus && (
+                  <Alert variant={resendStatus.type}>
+                    {resendStatus.message}
+                  </Alert>
+                )}
+
+                {!verificationEmail ? (
+                  <Input
+                    label="Account Email Address"
+                    id="verification-email-input"
+                    type="email"
+                    placeholder="name@example.com"
+                    value={verificationEmail}
+                    onChange={(e) => setVerificationEmail(e.target.value)}
+                    required
+                  />
+                ) : (
+                  <div className="flex items-center justify-between px-3 py-2 bg-stormy-mist/20 rounded-xl border border-stormy-border/60 text-xs">
+                    <div className="truncate">
+                      <span className="text-stormy-muted">Target email: </span>
+                      <strong className="text-stormy-main font-semibold">{verificationEmail}</strong>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => setVerificationEmail('')}
+                      className="text-stormy-sky hover:text-stormy-skyHover text-[11px] font-semibold underline shrink-0 ml-2 cursor-pointer"
+                    >
+                      Change
+                    </button>
+                  </div>
+                )}
+
+                <div>
+                  <div className="flex items-center justify-between mb-1.5">
+                    <label className="block text-xs font-semibold text-stormy-dark">
+                      Enter 6-Digit Code
+                    </label>
+                  </div>
+                  <input
+                    type="text"
+                    inputMode="numeric"
+                    maxLength={6}
+                    placeholder="123456"
+                    value={verificationCode}
+                    onChange={(e) => {
+                      setVerificationCode(e.target.value.replace(/\D/g, '').slice(0, 6));
+                      if (verificationError) setVerificationError(null);
+                    }}
+                    className="w-full text-center tracking-[0.4em] font-mono text-2xl font-bold py-2 px-3 border border-stormy-border rounded-xl focus:outline-none focus:ring-2 focus:ring-stormy-sky focus:border-stormy-sky shadow-subtle text-stormy-main bg-white"
+                    required
+                    autoFocus
+                    disabled={isVerifyingCode}
+                  />
+                  <p className="text-[11px] text-stormy-muted mt-1 text-center">
+                    Enter the code from the email or click the link in your inbox.
+                  </p>
+                </div>
+
+                <Button
+                  type="submit"
+                  variant="primary"
+                  size="md"
+                  className="w-full"
+                  loading={isVerifyingCode}
+                  disabled={isVerifyingCode || verificationCode.length < 6}
+                >
+                  Verify Email Code
+                </Button>
+
+                <div className="pt-2 border-t border-stormy-border flex items-center justify-between text-xs">
+                  <span className="text-stormy-muted">Didn&apos;t receive it?</span>
+                  <button
+                    type="button"
+                    onClick={handleResendVerificationCode}
+                    disabled={verificationCooldown > 0 || isResendingCode || !verificationEmail}
+                    className="font-semibold text-stormy-sky hover:text-stormy-skyHover disabled:text-stormy-muted underline cursor-pointer"
+                  >
+                    {verificationCooldown > 0
+                      ? `Resend in ${verificationCooldown}s`
+                      : 'Resend Email Code'}
+                  </button>
+                </div>
+              </form>
+            )}
+          </div>
+
+          <div className="pt-2 text-center text-xs space-y-1 border-t border-stormy-border">
+            <button
+              type="button"
+              onClick={() => {
+                router.push('/jobs');
+              }}
+              className="text-stormy-muted hover:text-stormy-dark transition-colors cursor-pointer block w-full text-center"
+            >
+              Skip for now &amp; browse jobs &rarr;
+            </button>
+            <button
+              type="button"
+              onClick={() => switchTab('login')}
+              className="text-stormy-muted hover:text-stormy-dark underline cursor-pointer block w-full text-center"
+            >
+              Return to Sign In
+            </button>
+          </div>
+        </div>
+
+        {/* SUB-VIEW 2: FORGOT PASSWORD (SLIDING OVERLAY) */}
+        <div
+          className={`absolute inset-0 w-full h-full bg-white z-20 flex flex-col justify-between p-6 sm:p-7 overflow-y-auto auth-panel-scroll ${
+            isMounted ? 'transition-all duration-300 ease-[cubic-bezier(0.16,1,0.3,1)]' : ''
+          }`}
+          style={{
+            transform: activeTab === 'forgot-password' ? 'translateX(0%)' : 'translateX(40px)',
+            opacity: activeTab === 'forgot-password' ? 1 : 0,
+            pointerEvents: activeTab === 'forgot-password' ? 'auto' : 'none',
+            visibility: activeTab === 'forgot-password' ? 'visible' : 'hidden',
+          }}
+        >
+          <div className="space-y-4">
             <div>
               <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-md text-[11px] font-medium bg-stormy-mist/40 text-stormy-dark border border-stormy-mist mb-2">
                 <span className="w-1.5 h-1.5 rounded-full bg-stormy-slate animate-pulse" />
@@ -873,7 +969,7 @@ export function AuthCard({ initialTab = 'login' }) {
                     size="md"
                     className="w-full"
                     onClick={() => {
-                      setActiveTab('login');
+                      switchTab('login');
                       setForgotSuccess(false);
                     }}
                   >
@@ -916,25 +1012,41 @@ export function AuthCard({ initialTab = 'login' }) {
                 >
                   Send Reset Link
                 </Button>
-
-                <div className="text-center text-xs text-stormy-muted pt-3 border-t border-stormy-border">
-                  Remembered your password?{' '}
-                  <button
-                    type="button"
-                    onClick={() => setActiveTab('login')}
-                    className="font-semibold text-stormy-dark hover:text-stormy-sky transition-colors cursor-pointer underline"
-                  >
-                    Return to Sign In
-                  </button>
-                </div>
               </form>
             )}
           </div>
-        )}
+
+          <div className="space-y-3 pt-3">
+            <div className="rounded-xl bg-stormy-canvas/80 border border-stormy-border/70 p-2.5 flex items-center gap-2.5 text-xs text-stormy-muted">
+              <div className="w-7 h-7 rounded-lg bg-white border border-stormy-border/80 flex items-center justify-center shrink-0 text-stormy-slate shadow-xs">
+                <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
+                </svg>
+              </div>
+              <div className="leading-tight text-[11px]">
+                <span className="font-semibold text-stormy-dark">Secure Recovery</span>
+                <p className="text-stormy-muted mt-0.5">One-time encrypted recovery link valid for 15 minutes.</p>
+              </div>
+            </div>
+
+            <div className="text-center text-xs text-stormy-muted pt-2 border-t border-stormy-border">
+              Remembered your password?{' '}
+              <button
+                type="button"
+                onClick={() => switchTab('login')}
+                className="font-semibold text-stormy-dark hover:text-stormy-sky transition-colors cursor-pointer underline"
+              >
+                Return to Sign In
+              </button>
+            </div>
+          </div>
+        </div>
       </div>
 
-      {/* Card Footer Security Tagline */}
-      <div className="px-6 py-3 border-t border-stormy-border/60 bg-stormy-canvas/40 text-center text-[11px] text-stormy-muted">
+      {/* ==================================================== */}
+      {/* 3. CARD FOOTER TAGLINE (CONSTANT FIXED HEIGHT)       */}
+      {/* ==================================================== */}
+      <div className="shrink-0 px-6 py-2.5 border-t border-stormy-border/60 bg-stormy-canvas/40 text-center text-[11px] text-stormy-muted flex items-center justify-center">
         Secured with encrypted in-memory tokens &amp; Argon2id
       </div>
     </div>

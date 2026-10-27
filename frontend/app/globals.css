@@ -49,3 +49,22 @@ body {
   font-family: var(--font-geist-sans), -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
   min-height: 100vh;
 }
+
+/* Subtle modern scrollbar for card panels */
+.auth-panel-scroll {
+  scrollbar-width: thin;
+  scrollbar-color: #CBD5E1 transparent;
+}
+
+.auth-panel-scroll::-webkit-scrollbar {
+  width: 4px;
+}
+
+.auth-panel-scroll::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.auth-panel-scroll::-webkit-scrollbar-thumb {
+  background-color: #CBD5E1;
+  border-radius: 9999px;
+}

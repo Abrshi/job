@@ -70,17 +70,22 @@ function NavbarContent() {
     }
   };
 
-  const scrollToAuth = (e) => {
+  const scrollToAuth = (e, tab = 'login') => {
     e?.preventDefault?.();
-    const el = document.getElementById('auth-card');
-    if (el) {
-      el.scrollIntoView({ behavior: 'smooth' });
-      setTimeout(() => {
-        el.querySelector('input')?.focus();
-      }, 400);
-    } else {
-      router.push('/#auth-card');
+    if (pathname === '/') {
+      const el = document.getElementById('auth-card');
+      if (el) {
+        if (typeof window !== 'undefined') {
+          window.dispatchEvent(new CustomEvent('authcard-switch-tab', { detail: tab }));
+        }
+        el.scrollIntoView({ behavior: 'smooth' });
+        setTimeout(() => {
+          el.querySelector('input')?.focus();
+        }, 400);
+        return;
+      }
     }
+    router.push(tab === 'register' ? '/register' : '/login');
   };
 
   const displayName = user
@@ -173,10 +178,10 @@ function NavbarContent() {
               </div>
             ) : (
               <div className="flex items-center gap-3">
-                <Button variant="ghost" size="sm" onClick={scrollToAuth}>
+                <Button variant="ghost" size="sm" onClick={(e) => scrollToAuth(e, 'login')}>
                   Sign In
                 </Button>
-                <Button variant="cta" size="sm" onClick={scrollToAuth}>
+                <Button variant="cta" size="sm" onClick={(e) => scrollToAuth(e, 'register')}>
                   Get Started
                 </Button>
               </div>
@@ -299,7 +304,7 @@ function NavbarContent() {
                 className="w-full"
                 onClick={(e) => {
                   setIsMobileMenuOpen(false);
-                  scrollToAuth(e);
+                  scrollToAuth(e, 'login');
                 }}
               >
                 Sign In
@@ -310,7 +315,7 @@ function NavbarContent() {
                 className="w-full"
                 onClick={(e) => {
                   setIsMobileMenuOpen(false);
-                  scrollToAuth(e);
+                  scrollToAuth(e, 'register');
                 }}
               >
                 Get Started
