@@ -1,6 +1,8 @@
 import { Router } from 'express';
 import adminRoutes from '../modules/admin/admin.routes';
 import adminSourcesRoutes from '../modules/sources/sources.routes';
+import adminTelegramRoutes from '../modules/telegram/telegram.routes';
+import adminDiscoveryRoutes from '../modules/discovery/discovery.routes';
 import { adminSettingsService } from '../modules/admin/admin.settings.service';
 
 const router = Router();
@@ -25,6 +27,8 @@ router.get('/settings', async (req, res, next) => {
 });
 
 router.use('/admin/sources', adminSourcesRoutes);
+router.use('/admin/telegram', adminTelegramRoutes);
+router.use('/admin/discovery', adminDiscoveryRoutes);
 router.use('/admin', adminRoutes);
 
 export default router;

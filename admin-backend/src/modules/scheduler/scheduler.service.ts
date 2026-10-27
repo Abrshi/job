@@ -2,6 +2,8 @@ import { prisma } from '../../lib/prisma';
 import { logger } from '../../lib/logger';
 import { sourcesService, SourcesService } from '../sources/sources.service';
 import { notificationsService } from '../alerts/notifications.service';
+import { telegramPublisherService } from '../telegram/telegram-publisher.service';
+import { discoveryService } from '../discovery/discovery.service';
 
 export class SourceScheduler {
   private timer: NodeJS.Timeout | null = null;
@@ -98,6 +100,14 @@ export class SourceScheduler {
         notificationsService.processPendingJobAlerts().catch((alertErr) => {
           logger.error('Error during scheduled job alert processing:', (alertErr as Error).message);
         });
+
+        telegramPublisherService.processPendingEligibleJobs().catch((tgErr) => {
+          logger.error('Error during scheduled telegram job processing:', (tgErr as Error).message);
+        });
+
+        this.processDueDiscoverySearches().catch((discErr) => {
+          logger.error('Error during scheduled discovery search processing:', (discErr as Error).message);
+        });
       }
     } catch (tickErr: any) {
       const msg = tickErr?.message || String(tickErr);
@@ -116,6 +126,28 @@ export class SourceScheduler {
       }
     } finally {
       this.isProcessing = false;
+    }
+  }
+
+  /**
+   * Process due discovery search definitions
+   */
+  private async processDueDiscoverySearches(): Promise<void> {
+    const dueSearches = await prisma.jobSearchDefinition.findMany({
+      where: {
+        status: 'ACTIVE',
+        OR: [{ nextRunAt: null }, { nextRunAt: { lte: new Date() } }],
+      },
+      take: 2, // Process small bounded batch per tick to obey rate & resource limits
+      orderBy: [{ priority: 'desc' }, { lastRunAt: 'asc' }],
+    });
+
+    for (const search of dueSearches) {
+      try {
+        await discoveryService.executeSearch(search.id);
+      } catch (err: any) {
+        logger.error(`Error executing scheduled discovery search ${search.id}:`, err.message);
+      }
     }
   }
 

@@ -174,6 +174,13 @@ enum VerificationType {
   PASSWORD_RESET
 }
 
+enum TelegramPostStatus {
+  PENDING
+  POSTED
+  FAILED
+  SKIPPED
+}
+
 model User {
   id              String           @id @default(uuid())
   email           String           @unique
@@ -291,6 +298,7 @@ model Job {
   applications             JobApplication[]
   notifications            JobNotification[]
   generatedDocuments       GeneratedDocument[]
+  telegramPost             TelegramPost?
 
   @@unique([sourceId, fingerprint])
   @@index([sourceId])
@@ -321,6 +329,25 @@ model JobClassification {
   @@index([jobId])
   @@index([isCurrent])
   @@map("job_classifications")
+}
+
+model TelegramPost {
+  id            String             @id @default(uuid())
+  jobId         String             @unique
+  job           Job                @relation(fields: [jobId], references: [id], onDelete: Cascade)
+  status        TelegramPostStatus @default(PENDING)
+  channelId     String
+  telegramMsgId Int?
+  publishedAt   DateTime?
+  errorMessage  String?            @db.Text
+  retryCount    Int                @default(0)
+  lastAttemptAt DateTime?
+  createdAt     DateTime           @default(now())
+  updatedAt     DateTime           @updatedAt
+
+  @@index([status])
+  @@index([publishedAt])
+  @@map("telegram_posts")
 }
 
 model CollectionRun {
@@ -855,6 +882,135 @@ model VerificationCode {
   @@index([expiresAt])
   @@map("verification_codes")
 }
+
+enum SearchDefinitionStatus {
+  ACTIVE
+  PAUSED
+  DISABLED
+}
+
+enum DiscoveryReferenceStatus {
+  PENDING_REVIEW
+  ACCEPTED
+  REJECTED
+  INGESTED
+}
+
+model JobSearchDefinition {
+  id                 String                 @id @default(uuid())
+  normalizedIdentity String                 @unique @map("normalized_identity")
+  queryText          String                 @map("query_text") @db.VarChar(500)
+  categorySlug       String                 @map("category_slug") @db.VarChar(100)
+  subcategory        String?                @db.VarChar(100)
+  targetLocation     String?                @map("target_location") @db.VarChar(150)
+  workArrangement    WorkArrangement?       @map("work_arrangement")
+  employmentType     EmploymentType?        @map("employment_type")
+  experienceLevel    ExperienceLevel?       @map("experience_level")
+  sourceSlug         String                 @default("all") @map("source_slug") @db.VarChar(50)
+  collectionMethod   String                 @default("AUTO") @map("collection_method") @db.VarChar(50)
+  status             SearchDefinitionStatus @default(ACTIVE)
+  priority           Int                    @default(5)
+  isAIGenerated      Boolean                @default(true) @map("is_ai_generated")
+  lastRunAt          DateTime?              @map("last_run_at")
+  lastSuccessAt      DateTime?              @map("last_success_at")
+  nextRunAt          DateTime?              @map("next_run_at")
+  lastRunStatus      String?                @map("last_run_status") @db.VarChar(50)
+  totalResults       Int                    @default(0) @map("total_results")
+  newJobsFound       Int                    @default(0) @map("new_jobs_found")
+  duplicatesFound    Int                    @default(0) @map("duplicates_found")
+  consecutiveErrors  Int                    @default(0) @map("consecutive_errors")
+  lastError          String?                @map("last_error") @db.Text
+  metadata           Json?
+  createdAt          DateTime               @default(now()) @map("created_at")
+  updatedAt          DateTime               @updatedAt @map("updated_at")
+
+  references         JobDiscoveryReference[]
+  runs               SearchExecutionRun[]
+
+  @@index([categorySlug])
+  @@index([status])
+  @@index([nextRunAt])
+  @@index([priority])
+  @@map("job_search_definitions")
+}
+
+model JobDiscoveryReference {
+  id                 String                   @id @default(uuid())
+  sourceSlug         String                   @default("linkedin") @map("source_slug") @db.VarChar(50)
+  originalUrl        String                   @map("original_url") @db.Text
+  urlHash            String                   @unique @map("url_hash") @db.VarChar(64)
+  title              String?                  @db.VarChar(300)
+  companyName        String?                  @map("company_name") @db.VarChar(200)
+  location           String?                  @db.VarChar(150)
+  workArrangement    WorkArrangement?         @map("work_arrangement")
+  searchDefinitionId String?                  @map("search_definition_id")
+  searchDefinition   JobSearchDefinition?     @relation(fields: [searchDefinitionId], references: [id], onDelete: SetNull)
+  status             DiscoveryReferenceStatus @default(PENDING_REVIEW)
+  capturedByUserId   String?                  @map("captured_by_user_id")
+  capturedAt         DateTime                 @default(now()) @map("captured_at")
+  reviewedAt         DateTime?                @map("reviewed_at")
+  ingestedJobId      String?                  @map("ingested_job_id")
+  reviewNotes        String?                  @map("review_notes") @db.Text
+  rawMetadata        Json?                    @map("raw_metadata")
+  createdAt          DateTime                 @default(now()) @map("created_at")
+  updatedAt          DateTime                 @updatedAt @map("updated_at")
+
+  @@index([sourceSlug])
+  @@index([status])
+  @@index([searchDefinitionId])
+  @@index([capturedAt])
+  @@map("job_discovery_references")
+}
+
+model SearchExecutionRun {
+  id                 String              @id @default(uuid())
+  searchDefinitionId String              @map("search_definition_id")
+  searchDefinition   JobSearchDefinition @relation(fields: [searchDefinitionId], references: [id], onDelete: Cascade)
+  status             RunStatus           @default(RUNNING)
+  startedAt          DateTime            @default(now()) @map("started_at")
+  finishedAt         DateTime?           @map("finished_at")
+  resultsCount       Int                 @default(0) @map("results_count")
+  newCount           Int                 @default(0) @map("new_count")
+  duplicateCount     Int                 @default(0) @map("duplicate_count")
+  errorSummary       String?             @map("error_summary") @db.Text
+  details            Json?
+  createdAt          DateTime            @default(now()) @map("created_at")
+
+  @@index([searchDefinitionId])
+  @@index([status])
+  @@index([startedAt])
+  @@map("search_execution_runs")
+}
+
+enum LinkedInCompanyStatus {
+  ACTIVE
+  WATCHED
+  PAUSED
+}
+
+model LinkedInCompany {
+  id              String                @id @default(uuid())
+  name            String                @db.VarChar(200)
+  normalizedName  String                @unique @map("normalized_name") @db.VarChar(200)
+  linkedinUrl     String?               @map("linkedin_url") @db.Text
+  linkedinSlug    String?               @map("linkedin_slug") @db.VarChar(150)
+  industry        String?               @db.VarChar(100)
+  location        String?               @default("Ethiopia") @db.VarChar(100)
+  status          LinkedInCompanyStatus @default(ACTIVE)
+  jobCount        Int                   @default(0) @map("job_count")
+  lastJobSeenAt   DateTime?             @map("last_job_seen_at")
+  searchUrl       String?               @map("search_url") @db.Text
+  notes           String?               @db.Text
+  createdAt       DateTime              @default(now()) @map("created_at")
+  updatedAt       DateTime              @updatedAt @map("updated_at")
+
+  @@index([status])
+  @@index([industry])
+  @@index([location])
+  @@map("linkedin_companies")
+}
+
+
 
 
 

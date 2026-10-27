@@ -18,6 +18,7 @@
     "sync:ethiojobs": "tsx scripts/sync-ethiojobs.ts",
     "sync:geezjobs": "tsx scripts/sync-geezjobs.ts",
     "reclassify": "tsx scripts/reclassify-jobs.ts",
+    "telegram:backfill": "tsx scripts/telegram-backfill.ts",
     "test": "NODE_ENV=test tsx --test \"tests/**/*.test.ts\""
   },
   "keywords": [],

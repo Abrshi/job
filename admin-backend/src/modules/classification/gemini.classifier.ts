@@ -9,7 +9,18 @@ import {
 } from './classification.types';
 
 export const CLASSIFICATION_PROMPT_VERSION = 'v2.0.0';
-export const DEFAULT_MODEL_IDENTIFIER = env.GEMINI_MODEL || 'gemini-3.5-flash-lite';
+export const DEFAULT_MODEL_IDENTIFIER = env.GEMINI_MODEL || 'gemini-2.0-flash-lite';
+
+/**
+ * Free-tier Google Gemini models to automatically cascade through when HTTP 429 quota/rate-limits are reached.
+ * Each distinct model family has its own rate-limit quota bucket in Google AI Studio.
+ */
+export const FREE_GEMINI_MODELS = [
+  env.GEMINI_MODEL || 'gemini-2.0-flash-lite',
+  'gemini-2.0-flash',
+  'gemini-1.5-flash-8b',
+  'gemini-1.5-flash',
+];
 
 const CATEGORY_LIST_FOR_PROMPT = INITIAL_CATEGORIES.map(
   (c) => `- ${c.slug}: "${c.name}" — ${c.description}`
@@ -362,86 +373,102 @@ Return your response ONLY as a valid JSON object matching this structure:
 Job Description:
 ${description.slice(0, 3000)}`;
 
-    const url = `https://generativelanguage.googleapis.com/v1beta/models/${this.model}:generateContent?key=${this.apiKey}`;
+    const candidateModels = Array.from(
+      new Set([this.model, ...FREE_GEMINI_MODELS])
+    ).filter(Boolean);
 
-    let attempts = 0;
-    const maxAttempts = 3;
     let lastError: unknown = null;
 
-    while (attempts < maxAttempts) {
-      attempts++;
-      try {
-        const response = await fetch(url, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            contents: [
-              {
-                role: 'user',
-                parts: [{ text: `${systemPrompt}\n\n${userPrompt}` }],
+    for (const currentModel of candidateModels) {
+      const url = `https://generativelanguage.googleapis.com/v1beta/models/${currentModel}:generateContent?key=${this.apiKey}`;
+      let attempts = 0;
+      const maxAttemptsPerModel = 2;
+
+      while (attempts < maxAttemptsPerModel) {
+        attempts++;
+        try {
+          const response = await fetch(url, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              contents: [
+                {
+                  role: 'user',
+                  parts: [{ text: `${systemPrompt}\n\n${userPrompt}` }],
+                },
+              ],
+              generationConfig: {
+                temperature: 0.1,
+                responseMimeType: 'application/json',
               },
-            ],
-            generationConfig: {
-              temperature: 0.1,
-              responseMimeType: 'application/json',
-            },
-          }),
-        });
+            }),
+          });
 
-        if (!response.ok) {
-          const errText = await response.text();
-          throw new Error(`Gemini API returned HTTP ${response.status}: ${errText.slice(0, 200)}`);
-        }
+          if (response.status === 429) {
+            logger.warn(
+              `[GeminiClassifier] Model '${currentModel}' hit free-tier quota/rate limit (HTTP 429). Automatically switching to next free model in cascade...`
+            );
+            // Immediately break out of retrying this rate-limited model and cascade to the next free model
+            break;
+          }
 
-        const data = (await response.json()) as any;
-        const candidate = data.candidates?.[0]?.content?.parts?.[0]?.text;
-        if (!candidate) {
-          throw new Error('Gemini API returned empty candidate response');
-        }
+          if (!response.ok) {
+            const errText = await response.text();
+            throw new Error(`Gemini API (${currentModel}) returned HTTP ${response.status}: ${errText.slice(0, 200)}`);
+          }
 
-        const parsedJson = JSON.parse(candidate);
+          const data = (await response.json()) as any;
+          const candidate = data.candidates?.[0]?.content?.parts?.[0]?.text;
+          if (!candidate) {
+            throw new Error(`Gemini API (${currentModel}) returned empty candidate response`);
+          }
 
-        // Normalize slugs if model returned human-readable names or primaryCategory
-        const rawSlug = parsedJson.categorySlug || parsedJson.primaryCategory || '';
-        const normalizedSlug = normalizeCategorySlug(rawSlug);
-        parsedJson.categorySlug = normalizedSlug;
-        parsedJson.primaryCategory = normalizedSlug;
+          const parsedJson = JSON.parse(candidate);
 
-        if (Array.isArray(parsedJson.secondaryCategories)) {
-          parsedJson.secondaryCategories = parsedJson.secondaryCategories.map((s: string) => normalizeCategorySlug(s));
-        } else {
-          parsedJson.secondaryCategories = [];
-        }
+          // Normalize slugs if model returned human-readable names or primaryCategory
+          const rawSlug = parsedJson.categorySlug || parsedJson.primaryCategory || '';
+          const normalizedSlug = normalizeCategorySlug(rawSlug);
+          parsedJson.categorySlug = normalizedSlug;
+          parsedJson.primaryCategory = normalizedSlug;
 
-        if (parsedJson.reason && !parsedJson.explanation) {
-          parsedJson.explanation = parsedJson.reason;
-        }
+          if (Array.isArray(parsedJson.secondaryCategories)) {
+            parsedJson.secondaryCategories = parsedJson.secondaryCategories.map((s: string) =>
+              normalizeCategorySlug(s)
+            );
+          } else {
+            parsedJson.secondaryCategories = [];
+          }
 
-        const validated = ClassificationOutputSchema.parse(parsedJson);
+          if (parsedJson.reason && !parsedJson.explanation) {
+            parsedJson.explanation = parsedJson.reason;
+          }
 
-        // Verify category slug actually exists in INITIAL_CATEGORIES
-        const categoryExists = INITIAL_CATEGORIES.some((c) => c.slug === validated.categorySlug);
-        if (!categoryExists) {
-          logger.warn(`Model returned unlisted slug '${validated.categorySlug}', falling back to heuristic.`);
-          return this.classifyHeuristic(title, description);
-        }
+          const validated = ClassificationOutputSchema.parse(parsedJson);
 
-        return validated;
-      } catch (err: unknown) {
-        lastError = err;
-        logger.warn(`Gemini classification attempt ${attempts} failed: ${(err as Error).message}`);
-        if (attempts < maxAttempts) {
-          // Bounded exponential backoff: 500ms, 1000ms
-          await new Promise((r) => setTimeout(r, 500 * attempts));
+          // Verify category slug actually exists in INITIAL_CATEGORIES
+          const categoryExists = INITIAL_CATEGORIES.some((c) => c.slug === validated.categorySlug);
+          if (!categoryExists) {
+            logger.warn(`Model returned unlisted slug '${validated.categorySlug}', falling back to heuristic.`);
+            return this.classifyHeuristic(title, description);
+          }
+
+          return validated;
+        } catch (err: unknown) {
+          lastError = err;
+          logger.warn(`[GeminiClassifier] Attempt ${attempts} on '${currentModel}' failed: ${(err as Error).message}`);
+          if (attempts < maxAttemptsPerModel) {
+            // Bounded exponential backoff: 400ms
+            await new Promise((r) => setTimeout(r, 400 * attempts));
+          }
         }
       }
     }
 
-    logger.error('Gemini classification exhausted retries. Falling back to heuristic classifier.', {
+    logger.warn('[GeminiClassifier] All Gemini models exhausted or rate-limited. Falling back to deterministic heuristic classifier.', {
       error: (lastError as Error)?.message,
     });
 
-    // If live API calls fail after retries, return deterministic fallback rather than crashing
+    // If live API calls fail after cascade, return deterministic fallback rather than crashing
     return this.classifyHeuristic(title, description);
   }
 }

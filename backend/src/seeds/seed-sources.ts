@@ -70,27 +70,43 @@ export async function seedSources(): Promise<{ createdCount: number }> {
     logger.info('Ethiojobs source already exists. Skipping creation.');
   }
 
-  // 4. GeezJobs
-  const geezExisting = await prisma.jobSource.findUnique({
-    where: { slug: 'geezjobs' },
+  // 4. LinkedIn (Discovery & Intake)
+  const linkedInExisting = await prisma.jobSource.findUnique({
+    where: { slug: 'linkedin' },
   });
 
-  if (!geezExisting) {
+  if (!linkedInExisting) {
     await prisma.jobSource.create({
       data: {
-        name: 'GeezJobs',
-        slug: 'geezjobs',
+        name: 'LinkedIn Jobs',
+        slug: 'linkedin',
         type: 'SCRAPER',
-        endpointUrl: 'https://geezjobs.com/search-jobs',
-        isActive: false, // Disabled by default pending official permission verification
-        pollingInterval: 120, // 2 hours
+        endpointUrl: 'https://www.linkedin.com/jobs',
+        isActive: true,
+        pollingInterval: 180, // 3 hours
       },
     });
-    logger.info('GeezJobs source created successfully (disabled by default pending confirmation).');
+    logger.info('LinkedIn Jobs source created successfully.');
     createdCount++;
   } else {
-    logger.info('GeezJobs source already exists. Skipping creation.');
+    logger.info('LinkedIn Jobs source already exists. Skipping creation.');
   }
 
   return { createdCount };
 }
+
+if (require.main === module || process.argv[1]?.endsWith('seed-sources.ts')) {
+  seedSources()
+    .then((r) => {
+      logger.info(`Done seeding sources: ${r.createdCount} created.`);
+      process.exit(0);
+    })
+    .catch((err) => {
+      logger.error('Error seeding sources:', err);
+      process.exit(1);
+    })
+    .finally(async () => {
+      await prisma.$disconnect();
+    });
+}
+

@@ -70,5 +70,43 @@ export async function seedSources(): Promise<{ createdCount: number }> {
     logger.info('Ethiojobs source already exists. Skipping creation.');
   }
 
+  // 4. LinkedIn (Discovery & Intake)
+  const linkedInExisting = await prisma.jobSource.findUnique({
+    where: { slug: 'linkedin' },
+  });
+
+  if (!linkedInExisting) {
+    await prisma.jobSource.create({
+      data: {
+        name: 'LinkedIn Jobs',
+        slug: 'linkedin',
+        type: 'SCRAPER',
+        endpointUrl: 'https://www.linkedin.com/jobs',
+        isActive: true,
+        pollingInterval: 180, // 3 hours
+      },
+    });
+    logger.info('LinkedIn Jobs source created successfully.');
+    createdCount++;
+  } else {
+    logger.info('LinkedIn Jobs source already exists. Skipping creation.');
+  }
+
   return { createdCount };
 }
+
+if (require.main === module || process.argv[1]?.endsWith('seed-sources.ts')) {
+  seedSources()
+    .then((r) => {
+      logger.info(`Done seeding sources: ${r.createdCount} created.`);
+      process.exit(0);
+    })
+    .catch((err) => {
+      logger.error('Error seeding sources:', err);
+      process.exit(1);
+    })
+    .finally(async () => {
+      await prisma.$disconnect();
+    });
+}
+

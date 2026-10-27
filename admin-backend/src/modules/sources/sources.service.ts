@@ -4,6 +4,7 @@ import { jobsRepository, JobsRepository } from '../jobs/jobs.repository';
 import { adapterRegistry, AdapterRegistry } from './adapters/adapter.registry';
 import { classificationService, ClassificationService } from '../classification/classification.service';
 import { notificationsService } from '../alerts/notifications.service';
+import { telegramPublisherService } from '../telegram/telegram-publisher.service';
 import { AppError } from '../../middleware/error-handler';
 import { logger } from '../../lib/logger';
 
@@ -110,7 +111,11 @@ export class SourcesService {
 
     const run = await this.sourcesRepo.createRun(source.id);
     const now = new Date();
-    await this.sourcesRepo.update(source.id, { lastRunAt: now });
+    const intervalMinutes = Math.max(Number(source.pollingInterval) || 180, 15);
+    await this.sourcesRepo.update(source.id, {
+      lastRunAt: now,
+      nextRunAt: new Date(now.getTime() + intervalMinutes * 60 * 1000),
+    });
 
     logger.info(`Starting collection run ${run.id} for source '${source.name}' (${source.slug})`);
 
@@ -143,7 +148,8 @@ export class SourcesService {
       await this.jobsRepo.applyExpirationPolicies();
 
       const finishTime = new Date();
-      const nextRunAt = new Date(finishTime.getTime() + source.pollingInterval * 60 * 1000);
+      const intervalMinutes = Math.max(Number(source.pollingInterval) || 180, 15);
+      const nextRunAt = new Date(finishTime.getTime() + intervalMinutes * 60 * 1000);
 
       const completedRun = await this.sourcesRepo.updateRun(run.id, {
         finishedAt: finishTime,
@@ -165,7 +171,7 @@ export class SourcesService {
           `fetched=${recordsFetched}, created=${jobsCreated}, updated=${jobsUpdated}, skipped=${jobsSkipped}`
       );
 
-      // Trigger asynchronous classification and alert evaluation (without blocking response, skip during tests)
+      // Trigger asynchronous classification, alert evaluation, and telegram posting (without blocking response, skip during tests)
       if (process.env.NODE_ENV !== 'test') {
         setImmediate(() => {
           this.classificationSvc.processPendingJobs(50).catch((err) => {
@@ -173,6 +179,9 @@ export class SourcesService {
           });
           notificationsService.processPendingJobAlerts().catch((alertErr) => {
             logger.error('Background alert evaluation error after collection:', alertErr.message);
+          });
+          telegramPublisherService.processPendingEligibleJobs().catch((tgErr) => {
+            logger.error('Background telegram publication processing error after collection:', tgErr.message);
           });
         });
       }
@@ -185,7 +194,8 @@ export class SourcesService {
       logger.error(`Collection run ${run.id} failed for '${source.name}': ${errorMsg}`);
 
       // Set next run attempt with backoff
-      const nextRunAt = new Date(finishTime.getTime() + Math.min(source.pollingInterval, 15) * 60 * 1000);
+      const retryMinutes = Math.max(Math.min(Number(source.pollingInterval) || 15, 15), 5);
+      const nextRunAt = new Date(finishTime.getTime() + retryMinutes * 60 * 1000);
 
       const failedRun = await this.sourcesRepo.updateRun(run.id, {
         finishedAt: finishTime,

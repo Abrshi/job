@@ -13,7 +13,8 @@
     "db:sync": "tsx scripts/sync-database-schema.ts",
     "prisma:generate": "tsx scripts/sync-database-schema.ts && prisma generate",
     "prisma:push": "tsx scripts/sync-database-schema.ts && prisma db push",
-    "prisma:migrate": "tsx scripts/sync-database-schema.ts && prisma migrate dev"
+    "prisma:migrate": "tsx scripts/sync-database-schema.ts && prisma migrate dev",
+    "telegram:backfill": "tsx scripts/telegram-backfill.ts"
   },
   "keywords": [],
   "author": "",
