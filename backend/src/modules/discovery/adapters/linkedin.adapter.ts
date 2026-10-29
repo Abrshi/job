@@ -1,4 +1,5 @@
 import crypto from 'node:crypto';
+import dns from 'node:dns';
 import { JobSource } from '@prisma/client';
 import {
   NormalizedJob,
@@ -7,6 +8,7 @@ import {
   ExperienceLevelEnum,
 } from '../../sources/adapters/source-adapter.interface';
 import { generateJobFingerprint } from '../../sources/adapters/fingerprint.util';
+import { logger } from '../../../lib/logger';
 
 export interface LinkedInJobUrlDetails {
   isValid: boolean;
@@ -14,6 +16,29 @@ export interface LinkedInJobUrlDetails {
   canonicalUrl: string | null;
   urlHash: string | null;
   error?: string;
+}
+
+export interface LinkedInCardItem {
+  jobId: string;
+  title: string;
+  company: string;
+  location: string;
+  publishedAt: Date;
+  url: string;
+  description?: string;
+  workArrangement?: WorkArrangementType;
+  employmentType?: EmploymentTypeEnum;
+}
+
+function decodeHtmlEntities(encoded: string): string {
+  return (encoded || '')
+    .replace(/&amp;/g, '&')
+    .replace(/&lt;/g, '<')
+    .replace(/&gt;/g, '>')
+    .replace(/&quot;/g, '"')
+    .replace(/&#39;/g, "'")
+    .replace(/&nbsp;/g, ' ')
+    .trim();
 }
 
 export class LinkedInAdapter {
@@ -185,6 +210,156 @@ export class LinkedInAdapter {
       experienceLevel: 'MID' as ExperienceLevelEnum,
       publishedAt: new Date(),
     };
+  }
+
+  /**
+   * Fetch live public job search cards from LinkedIn's guest search API.
+   * Uses public guest endpoint with past 7-day filter (f_TPR=r604800) and location.
+   */
+  async fetchPublicJobCards(
+    keywords: string,
+    options: {
+      location?: string;
+      remoteOnly?: boolean;
+      start?: number;
+      limit?: number;
+      timeRange?: 'past_24h' | 'past_week' | 'past_month' | 'any';
+    } = {}
+  ): Promise<LinkedInCardItem[]> {
+    try {
+      dns.setDefaultResultOrder('ipv4first');
+    } catch {
+      // ignore
+    }
+
+    const location = options.location?.trim() || 'Ethiopia';
+    const start = options.start || 0;
+    const timeRange = options.timeRange || 'past_week';
+
+    const params = new URLSearchParams();
+    params.set('keywords', keywords.trim());
+    params.set('location', location);
+    params.set('start', String(start));
+
+    if (timeRange === 'past_24h') params.set('f_TPR', 'r86400');
+    else if (timeRange === 'past_week') params.set('f_TPR', 'r604800');
+    else if (timeRange === 'past_month') params.set('f_TPR', 'r2592000');
+
+    if (options.remoteOnly) {
+      params.set('f_WT', '2');
+    }
+    params.set('sortBy', 'DD');
+
+    const searchUrl = `https://www.linkedin.com/jobs-guest/jobs/api/seeMoreJobPostings/search?${params.toString()}`;
+
+    try {
+      const response = await fetch(searchUrl, {
+        method: 'GET',
+        headers: {
+          'User-Agent':
+            'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+          Accept: 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+          'Accept-Language': 'en-US,en;q=0.9',
+        },
+      });
+
+      if (!response.ok) {
+        logger.warn(`[LinkedInAdapter] Guest search returned status ${response.status} for query '${keywords}'`);
+        return [];
+      }
+
+      const html = await response.text();
+      return this.parseJobCardsFromHtml(html, options.limit || 50);
+    } catch (err: any) {
+      logger.warn(`[LinkedInAdapter] Failed to fetch LinkedIn job cards for '${keywords}': ${err.message}`);
+      return [];
+    }
+  }
+
+  /**
+   * Parse HTML returned by LinkedIn guest search into structured LinkedInCardItems
+   */
+  parseJobCardsFromHtml(html: string, maxItems = 50): LinkedInCardItem[] {
+    const jobs: LinkedInCardItem[] = [];
+    const cardRegex = /<div class="[^"]*job-search-card[^"]*"([\s\S]*?)<\/li>/gi;
+    let match: RegExpExecArray | null;
+
+    while ((match = cardRegex.exec(html)) !== null && jobs.length < maxItems) {
+      const card = match[0];
+      const urnMatch = card.match(/data-entity-urn="urn:li:jobPosting:(\d+)"/);
+      const titleMatch = card.match(/<h3 class="[^"]*base-search-card__title[^"]*">\s*([\s\S]*?)\s*<\/h3>/);
+      const companyMatch =
+        card.match(/<h4 class="[^"]*base-search-card__subtitle[^"]*">[\s\S]*?<a[^\>]*>\s*([\s\S]*?)\s*<\/a>/) ||
+        card.match(/<h4 class="[^"]*base-search-card__subtitle[^"]*">\s*([\s\S]*?)\s*<\/h4>/);
+      const locationMatch = card.match(/<span class="[^"]*job-search-card__location[^"]*">\s*([\s\S]*?)\s*<\/span>/);
+      const dateMatch = card.match(/<time[^\>]*datetime="([^"]*)"/);
+      const linkMatch = card.match(/<a class="[^"]*base-card__full-link[^"]*" href="([^"]*)"/);
+
+      const jobId = urnMatch ? urnMatch[1] : null;
+      const title = titleMatch ? decodeHtmlEntities(titleMatch[1].replace(/<[^>]*>/g, ' ')) : null;
+      const company = companyMatch ? decodeHtmlEntities(companyMatch[1].replace(/<[^>]*>/g, ' ')) : 'Employer on LinkedIn';
+      const location = locationMatch ? decodeHtmlEntities(locationMatch[1].replace(/<[^>]*>/g, ' ')) : 'Ethiopia';
+      const publishedAt = dateMatch ? new Date(dateMatch[1]) : new Date();
+      const cleanUrl = jobId
+        ? `https://www.linkedin.com/jobs/view/${jobId}`
+        : linkMatch
+        ? decodeHtmlEntities(linkMatch[1].split('?')[0])
+        : null;
+
+      if (jobId && title && cleanUrl) {
+        const isRemote =
+          location.toLowerCase().includes('remote') ||
+          title.toLowerCase().includes('remote');
+        const isHybrid =
+          location.toLowerCase().includes('hybrid') ||
+          title.toLowerCase().includes('hybrid');
+        const workArrangement: WorkArrangementType = isRemote ? 'REMOTE' : isHybrid ? 'HYBRID' : 'ON_SITE';
+
+        jobs.push({
+          jobId,
+          title,
+          company,
+          location,
+          publishedAt,
+          url: cleanUrl,
+          workArrangement,
+        });
+      }
+    }
+
+    return jobs;
+  }
+
+  /**
+   * Fetch full job posting detail from LinkedIn's public jobPosting API
+   */
+  async fetchJobDetails(jobId: string): Promise<{ description?: string; criteria?: string }> {
+    try {
+      const url = `https://www.linkedin.com/jobs-guest/jobs/api/jobPosting/${jobId}`;
+      const res = await fetch(url, {
+        headers: {
+          'User-Agent':
+            'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+          Accept: 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+        },
+      });
+
+      if (!res.ok) return {};
+      const text = await res.text();
+      const descMatch = text.match(/<div class="[^"]*show-more-less-html__markup[^"]*">([\s\S]*?)<\/div>/);
+      const description = descMatch
+        ? decodeHtmlEntities(descMatch[1].replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim())
+        : undefined;
+
+      const criteriaMatch = text.match(/<ul class="description__job-criteria-list">([\s\S]*?)<\/ul>/);
+      const criteria = criteriaMatch
+        ? decodeHtmlEntities(criteriaMatch[1].replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim())
+        : undefined;
+
+      return { description, criteria };
+    } catch {
+      return {};
+    }
   }
 
   /**

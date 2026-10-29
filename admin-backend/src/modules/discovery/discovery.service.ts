@@ -281,14 +281,66 @@ export class DiscoveryService {
     logger.info(`[DiscoveryService] Executing search '${search.queryText}' (${search.id})`);
 
     try {
-      // In discovery mode: compute yield against matching references and catalogue
-      // Query intake references matching this search query or category
-      const matchingReferences = await this.db.jobDiscoveryReference.count({
-        where: {
-          searchDefinitionId: search.id,
-        },
-      });
+      // 1. Fetch live public vacancies matching this search query from LinkedIn
+      let liveCards: any[] = [];
+      try {
+        liveCards = await this.lAdapter.fetchPublicJobCards(search.queryText, {
+          location: search.targetLocation || 'Ethiopia',
+          remoteOnly: search.workArrangement === 'REMOTE',
+          timeRange: 'past_week',
+          limit: 25,
+        });
+      } catch (fetchErr: any) {
+        logger.warn(`[DiscoveryService] LinkedIn live fetch failed for query '${search.queryText}':`, fetchErr.message);
+      }
 
+      let newCount = 0;
+      let duplicateCount = 0;
+
+      for (const card of liveCards) {
+        const canonical = this.lAdapter.canonicalizeJobUrl(card.url);
+        const cleanUrl = canonical.canonicalUrl || card.url;
+        const urlHash = canonical.urlHash || crypto.createHash('sha256').update(cleanUrl).digest('hex');
+
+        try {
+          const existing = await this.db.jobDiscoveryReference.findUnique({
+            where: { urlHash },
+          });
+
+          if (existing) {
+            duplicateCount++;
+          } else {
+            newCount++;
+            await this.db.jobDiscoveryReference.create({
+              data: {
+                searchDefinitionId: search.id,
+                sourceSlug: 'linkedin',
+                originalUrl: cleanUrl,
+                urlHash,
+                title: card.title,
+                companyName: card.company,
+                location: card.location,
+                workArrangement: card.workArrangement || 'ON_SITE',
+                status: 'PENDING_REVIEW',
+                rawMetadata: {
+                  jobId: card.jobId,
+                  searchQuery: search.queryText,
+                  categorySlug: search.categorySlug,
+                  targetLocation: search.targetLocation,
+                },
+              },
+            });
+
+            if (card.company) {
+              this.companiesService.recordCompanyJobDiscovered(card.company).catch(() => {});
+            }
+          }
+        } catch (cardErr: any) {
+          logger.warn(`[DiscoveryService] Error persisting search reference ${card.jobId}:`, cardErr.message);
+        }
+      }
+
+      const totalResults = liveCards.length;
       const nextRunAt = new Date(now.getTime() + 6 * 60 * 60 * 1000); // 6 hours
 
       await this.db.searchExecutionRun.update({
@@ -296,9 +348,9 @@ export class DiscoveryService {
         data: {
           status: 'SUCCESS',
           finishedAt: new Date(),
-          resultsCount: matchingReferences,
-          newCount: 0,
-          duplicateCount: 0,
+          resultsCount: totalResults,
+          newCount,
+          duplicateCount,
         },
       });
 
@@ -308,6 +360,9 @@ export class DiscoveryService {
           lastSuccessAt: new Date(),
           nextRunAt,
           lastRunStatus: 'SUCCESS',
+          totalDiscovered: { increment: totalResults },
+          newJobsFound: { increment: newCount },
+          duplicatesFound: { increment: duplicateCount },
           consecutiveErrors: 0,
           lastError: null,
         },
@@ -315,9 +370,9 @@ export class DiscoveryService {
 
       return {
         success: true,
-        resultsCount: matchingReferences,
-        newCount: 0,
-        duplicateCount: 0,
+        resultsCount: totalResults,
+        newCount,
+        duplicateCount,
       };
     } catch (err: any) {
       const errorMsg = err.message || 'Search execution failure';
