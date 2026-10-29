@@ -45,13 +45,17 @@ export function getSourceTheme(source) {
     return {
       name: 'LinkedIn',
       slug: 'linkedin',
+      logoUrl: '/linkedin.png',
       // Very thin subtle sky/blue tint
       cardClasses: 'bg-[#F8FAFD] hover:bg-[#F2F6FC] border-sky-100/90 hover:border-[#0A66C2]/40',
       badgeClasses: 'bg-white text-[#0A66C2] border-sky-200/80 shadow-2xs',
       icon: (
-        <svg className="w-3.5 h-3.5 shrink-0" viewBox="0 0 24 24" fill="#0A66C2">
-          <path d="M19 3a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h14m-.5 15.5v-5.3a3.26 3.26 0 0 0-3.26-3.26c-.85 0-1.84.52-2.28 1.3v-1.11h-2.79v8.37h2.79v-4.93c0-.77.62-1.4 1.39-1.4a1.4 1.4 0 0 1 1.4 1.4v4.93h2.75M6.46 8.76a1.62 1.62 0 1 0 0-3.24 1.62 1.62 0 0 0 0 3.24m1.37 9.74v-8.37H5.09v8.37h2.74z" />
-        </svg>
+        <img
+          src="/linkedin.png"
+          alt="LinkedIn"
+          className="w-3.5 h-3.5 object-contain rounded-xs shrink-0"
+          loading="lazy"
+        />
       ),
     };
   }
@@ -61,15 +65,17 @@ export function getSourceTheme(source) {
     return {
       name: 'Afriwork',
       slug: 'afriwork',
+      logoUrl: '/afriwork.png',
       // Very thin subtle warm amber tint
       cardClasses: 'bg-[#FFFDF7] hover:bg-[#FFF9EC] border-amber-100/90 hover:border-[#F59E0B]/50',
       badgeClasses: 'bg-white text-amber-700 border-amber-200/80 shadow-2xs',
       icon: (
-        <svg className="w-3.5 h-3.5 shrink-0" viewBox="0 0 24 24" fill="none">
-          <rect width="24" height="24" rx="5" fill="#F59E0B" />
-          <path d="M7 16L12 7L17 16H14.5L12 11L9.5 16H7Z" fill="white" />
-          <circle cx="12" cy="14" r="1.5" fill="#F59E0B" />
-        </svg>
+        <img
+          src="/afriwork-icon.png"
+          alt="Afriwork"
+          className="w-3.5 h-3.5 object-contain rounded-xs shrink-0"
+          loading="lazy"
+        />
       ),
     };
   }
@@ -79,14 +85,17 @@ export function getSourceTheme(source) {
     return {
       name: 'HaHuJobs',
       slug: 'hahujobs',
+      logoUrl: '/hahujob.jpeg',
       // Very thin subtle mint/emerald tint
       cardClasses: 'bg-[#F7FDF9] hover:bg-[#EEFAF2] border-emerald-100/90 hover:border-[#10B981]/50',
       badgeClasses: 'bg-white text-emerald-700 border-emerald-200/80 shadow-2xs',
       icon: (
-        <svg className="w-3.5 h-3.5 shrink-0" viewBox="0 0 24 24" fill="none">
-          <rect width="24" height="24" rx="5" fill="#10B981" />
-          <path d="M7 7V17M17 7V17M7 12H17" stroke="white" strokeWidth="2.5" strokeLinecap="round" />
-        </svg>
+        <img
+          src="/hahujob.jpeg"
+          alt="HaHuJobs"
+          className="w-3.5 h-3.5 object-contain rounded-xs shrink-0"
+          loading="lazy"
+        />
       ),
     };
   }
@@ -96,14 +105,17 @@ export function getSourceTheme(source) {
     return {
       name: 'Ethiojobs',
       slug: 'ethiojobs',
+      logoUrl: '/Ethiojobs.webp',
       // Very thin subtle rose/crimson tint
       cardClasses: 'bg-[#FFF9F9] hover:bg-[#FFF0F0] border-rose-100/90 hover:border-[#E11D48]/40',
       badgeClasses: 'bg-white text-rose-700 border-rose-200/80 shadow-2xs',
       icon: (
-        <svg className="w-3.5 h-3.5 shrink-0" viewBox="0 0 24 24" fill="none">
-          <rect width="24" height="24" rx="5" fill="#E11D48" />
-          <path d="M6 10H18V18H6V10ZM9 10V7C9 6.44772 9.44772 6 10 6H14C14.5523 6 15 6.44772 15 7V10H9Z" fill="white" />
-        </svg>
+        <img
+          src="/ethiojobs-icon.webp"
+          alt="Ethiojobs"
+          className="w-3.5 h-3.5 object-contain rounded-xs shrink-0"
+          loading="lazy"
+        />
       ),
     };
   }
@@ -113,6 +125,7 @@ export function getSourceTheme(source) {
     return {
       name: 'GeezJobs',
       slug: 'geezjobs',
+      logoUrl: null,
       // Very thin subtle indigo tint
       cardClasses: 'bg-[#F8F9FE] hover:bg-[#F0F2FD] border-indigo-100/90 hover:border-[#4F46E5]/40',
       badgeClasses: 'bg-white text-indigo-700 border-indigo-200/80 shadow-2xs',
