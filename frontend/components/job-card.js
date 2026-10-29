@@ -34,6 +34,112 @@ export function formatRelativeTime(dateString) {
   return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
 }
 
+/**
+ * Returns brand metadata, clean logo icon, and subtle background tint classes for job sources
+ */
+export function getSourceTheme(source) {
+  const raw = (typeof source === 'string' ? source : (source?.slug || source?.name || '')).toLowerCase();
+
+  // 1. LinkedIn
+  if (raw.includes('linkedin')) {
+    return {
+      name: 'LinkedIn',
+      slug: 'linkedin',
+      // Very thin subtle sky/blue tint
+      cardClasses: 'bg-[#F8FAFD] hover:bg-[#F2F6FC] border-sky-100/90 hover:border-[#0A66C2]/40',
+      badgeClasses: 'bg-white text-[#0A66C2] border-sky-200/80 shadow-2xs',
+      icon: (
+        <svg className="w-3.5 h-3.5 shrink-0" viewBox="0 0 24 24" fill="#0A66C2">
+          <path d="M19 3a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h14m-.5 15.5v-5.3a3.26 3.26 0 0 0-3.26-3.26c-.85 0-1.84.52-2.28 1.3v-1.11h-2.79v8.37h2.79v-4.93c0-.77.62-1.4 1.39-1.4a1.4 1.4 0 0 1 1.4 1.4v4.93h2.75M6.46 8.76a1.62 1.62 0 1 0 0-3.24 1.62 1.62 0 0 0 0 3.24m1.37 9.74v-8.37H5.09v8.37h2.74z" />
+        </svg>
+      ),
+    };
+  }
+
+  // 2. Afriwork
+  if (raw.includes('afriwork')) {
+    return {
+      name: 'Afriwork',
+      slug: 'afriwork',
+      // Very thin subtle warm amber tint
+      cardClasses: 'bg-[#FFFDF7] hover:bg-[#FFF9EC] border-amber-100/90 hover:border-[#F59E0B]/50',
+      badgeClasses: 'bg-white text-amber-700 border-amber-200/80 shadow-2xs',
+      icon: (
+        <svg className="w-3.5 h-3.5 shrink-0" viewBox="0 0 24 24" fill="none">
+          <rect width="24" height="24" rx="5" fill="#F59E0B" />
+          <path d="M7 16L12 7L17 16H14.5L12 11L9.5 16H7Z" fill="white" />
+          <circle cx="12" cy="14" r="1.5" fill="#F59E0B" />
+        </svg>
+      ),
+    };
+  }
+
+  // 3. HaHuJobs
+  if (raw.includes('hahu')) {
+    return {
+      name: 'HaHuJobs',
+      slug: 'hahujobs',
+      // Very thin subtle mint/emerald tint
+      cardClasses: 'bg-[#F7FDF9] hover:bg-[#EEFAF2] border-emerald-100/90 hover:border-[#10B981]/50',
+      badgeClasses: 'bg-white text-emerald-700 border-emerald-200/80 shadow-2xs',
+      icon: (
+        <svg className="w-3.5 h-3.5 shrink-0" viewBox="0 0 24 24" fill="none">
+          <rect width="24" height="24" rx="5" fill="#10B981" />
+          <path d="M7 7V17M17 7V17M7 12H17" stroke="white" strokeWidth="2.5" strokeLinecap="round" />
+        </svg>
+      ),
+    };
+  }
+
+  // 4. Ethiojobs
+  if (raw.includes('ethiojob')) {
+    return {
+      name: 'Ethiojobs',
+      slug: 'ethiojobs',
+      // Very thin subtle rose/crimson tint
+      cardClasses: 'bg-[#FFF9F9] hover:bg-[#FFF0F0] border-rose-100/90 hover:border-[#E11D48]/40',
+      badgeClasses: 'bg-white text-rose-700 border-rose-200/80 shadow-2xs',
+      icon: (
+        <svg className="w-3.5 h-3.5 shrink-0" viewBox="0 0 24 24" fill="none">
+          <rect width="24" height="24" rx="5" fill="#E11D48" />
+          <path d="M6 10H18V18H6V10ZM9 10V7C9 6.44772 9.44772 6 10 6H14C14.5523 6 15 6.44772 15 7V10H9Z" fill="white" />
+        </svg>
+      ),
+    };
+  }
+
+  // 5. GeezJobs
+  if (raw.includes('geez')) {
+    return {
+      name: 'GeezJobs',
+      slug: 'geezjobs',
+      // Very thin subtle indigo tint
+      cardClasses: 'bg-[#F8F9FE] hover:bg-[#F0F2FD] border-indigo-100/90 hover:border-[#4F46E5]/40',
+      badgeClasses: 'bg-white text-indigo-700 border-indigo-200/80 shadow-2xs',
+      icon: (
+        <svg className="w-3.5 h-3.5 shrink-0" viewBox="0 0 24 24" fill="none">
+          <rect width="24" height="24" rx="5" fill="#2563EB" />
+          <path d="M12 5L15 12H9L12 5ZM12 19L9 12H15L12 19Z" fill="white" />
+        </svg>
+      ),
+    };
+  }
+
+  if (!raw) return null;
+
+  return {
+    name: source?.name || source || 'Platform',
+    slug: source?.slug || 'direct',
+    cardClasses: 'bg-white hover:bg-slate-50/50 border-stormy-border hover:border-stormy-sky',
+    badgeClasses: 'bg-slate-100 text-stormy-muted border-slate-200',
+    icon: (
+      <svg className="w-3.5 h-3.5 shrink-0 text-slate-500" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
+      </svg>
+    ),
+  };
+}
+
 export function JobCard({
   job,
   onToggleSave,
@@ -49,6 +155,7 @@ export function JobCard({
 
   const formattedDate = formatRelativeTime(job.publishedAt || job.firstSeenAt);
   const locationDisplay = [job.city, job.country].filter(Boolean).join(', ') || 'Location Unspecified';
+  const sourceConfig = getSourceTheme(job.source || job.sourceSlug);
 
   const arrangementLabels = {
     REMOTE: { label: 'Remote', bg: 'bg-emerald-50 text-emerald-700 border-emerald-200' },
@@ -76,14 +183,22 @@ export function JobCard({
   };
 
   return (
-    <div className="group relative bg-white border border-stormy-border rounded-xl p-5 hover:border-stormy-sky hover:shadow-card transition-all duration-200 flex flex-col justify-between">
+    <div
+      className={`group relative rounded-xl p-5 border transition-all duration-200 flex flex-col justify-between shadow-2xs hover:shadow-card ${
+        sourceConfig?.cardClasses || 'bg-white border-stormy-border hover:border-stormy-sky hover:bg-slate-50/50'
+      }`}
+    >
       <div>
-        {/* Top bar: Source + Date + Save control */}
+        {/* Top bar: Source with Logo + Category + Date + Save control */}
         <div className="flex items-center justify-between gap-2 mb-3">
           <div className="flex items-center gap-2 flex-wrap">
-            {job.source?.name && (
-              <span className="inline-flex items-center px-2 py-0.5 rounded text-[11px] font-semibold bg-slate-100 text-stormy-muted border border-slate-200">
-                {job.source.name}
+            {sourceConfig && (
+              <span
+                className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded-md text-[11px] font-semibold border ${sourceConfig.badgeClasses}`}
+                title={`Job vacancy sourced from ${sourceConfig.name}`}
+              >
+                {sourceConfig.icon}
+                <span>{sourceConfig.name}</span>
               </span>
             )}
             {job.category?.name && (

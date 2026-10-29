@@ -77,6 +77,7 @@ function JobsContent() {
             { slug: 'ethiojobs', name: 'Ethiojobs' },
             { slug: 'geezjobs', name: 'GeezJobs' },
             { slug: 'afriwork', name: 'Afriwork' },
+            { slug: 'linkedin', name: 'LinkedIn' },
           ]);
         }
       } catch (err) {
@@ -86,6 +87,7 @@ function JobsContent() {
           { slug: 'ethiojobs', name: 'Ethiojobs' },
           { slug: 'geezjobs', name: 'GeezJobs' },
           { slug: 'afriwork', name: 'Afriwork' },
+          { slug: 'linkedin', name: 'LinkedIn' },
         ]);
       }
     }
