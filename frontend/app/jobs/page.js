@@ -141,7 +141,7 @@ function JobsContent() {
           minSalary,
           sortBy,
           sortOrder,
-          limit: 12,
+          limit: 36,
         });
 
         if (!isCancelled) {
@@ -708,7 +708,7 @@ function JobsContent() {
             {/* Loading Skeletons */}
             {isLoading ? (
               <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4 gap-4 xl:gap-5">
-                {[...Array(8)].map((_, i) => (
+                {[...Array(16)].map((_, i) => (
                   <div
                     key={i}
                     className="bg-white border border-stormy-border rounded-xl p-5 space-y-4 animate-pulse shadow-subtle"

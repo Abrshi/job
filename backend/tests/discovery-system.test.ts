@@ -3,13 +3,13 @@ import assert from 'node:assert';
 import {
   AISearchPlannerService,
   computeSearchIdentity,
-} from '../../src/modules/discovery/ai-search-planner.service';
-import { PROFESSIONAL_TAXONOMY } from '../../src/modules/discovery/taxonomy-data';
+} from '../src/modules/discovery/ai-search-planner.service';
+import { PROFESSIONAL_TAXONOMY } from '../src/modules/discovery/taxonomy-data';
 import {
   LinkedInAdapter,
-} from '../../src/modules/discovery/adapters/linkedin.adapter';
-import { SearchRegistryService } from '../../src/modules/discovery/search-registry.service';
-import { DiscoveryService } from '../../src/modules/discovery/discovery.service';
+} from '../src/modules/discovery/adapters/linkedin.adapter';
+import { SearchRegistryService } from '../src/modules/discovery/search-registry.service';
+import { DiscoveryService } from '../src/modules/discovery/discovery.service';
 import { WorkArrangement, EmploymentType, ExperienceLevel, JobSource } from '@prisma/client';
 
 describe('AI-Powered Job Discovery and Coverage System', () => {

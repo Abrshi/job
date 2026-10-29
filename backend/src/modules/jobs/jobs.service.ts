@@ -9,7 +9,7 @@ export class JobsService {
    */
   async getPublicJobs(options: JobQueryInput, currentUserId?: string) {
     const page = Math.max(1, Number(options.page) || 1);
-    const limit = Math.min(50, Math.max(1, Number(options.limit) || 20));
+    const limit = Math.min(100, Math.max(1, Number(options.limit) || 36));
     const skip = (page - 1) * limit;
     const now = new Date();
 
@@ -438,7 +438,7 @@ export class JobsService {
    */
   async getSavedJobs(userId: string, page = 1, limit = 20) {
     const safePage = Math.max(1, page);
-    const safeLimit = Math.min(50, Math.max(1, limit));
+    const safeLimit = Math.min(100, Math.max(1, limit));
     const skip = (safePage - 1) * safeLimit;
     const now = new Date();
 
@@ -628,7 +628,7 @@ export class JobsService {
    */
   async getUserApplications(userId: string, page = 1, limit = 20) {
     const safePage = Math.max(1, page);
-    const safeLimit = Math.min(50, Math.max(1, limit));
+    const safeLimit = Math.min(100, Math.max(1, limit));
     const skip = (safePage - 1) * safeLimit;
 
     const [applications, total] = await Promise.all([
