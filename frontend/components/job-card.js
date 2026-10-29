@@ -47,6 +47,7 @@ export function getSourceTheme(source) {
       name: 'LinkedIn',
       slug: 'linkedin',
       color: '#4D9D8F',
+      logoShape: 'square',
       logoUrl: '/linkedin.png',
       // Very thin subtle tint with #4D9D8F
       cardClasses: 'bg-[#4D9D8F]/[0.04] hover:bg-[#4D9D8F]/[0.08] border-[#4D9D8F]/25 hover:border-[#4D9D8F]/60',
@@ -70,21 +71,22 @@ export function getSourceTheme(source) {
     };
   }
 
-  // 2. Afriwork: #E74B60
+  // 2. Afriwork: #E74B60 (Long horizontal rectangle logo)
   if (raw.includes('afriwork')) {
     return {
       name: 'Afriwork',
       slug: 'afriwork',
       color: '#E74B60',
-      logoUrl: '/afriwork.png',
+      logoShape: 'rectangle',
+      logoUrl: '/afriwork-rect.png',
       // Very thin subtle tint with #E74B60
       cardClasses: 'bg-[#E74B60]/[0.04] hover:bg-[#E74B60]/[0.08] border-[#E74B60]/25 hover:border-[#E74B60]/60',
       badgeClasses: 'bg-white text-[#AD1F35] border-[#E74B60]/40 shadow-2xs',
       bottomLogo: (
         <img
-          src="/afriwork-icon.png"
+          src="/afriwork-rect.png"
           alt="Afriwork"
-          className="w-full h-full object-contain rounded-sm"
+          className="h-full w-auto max-w-[84px] object-contain"
           loading="lazy"
         />
       ),
@@ -99,12 +101,13 @@ export function getSourceTheme(source) {
     };
   }
 
-  // 3. HaHuJobs: #4D9D8F
+  // 3. HaHuJobs: #4D9D8F (Square logo)
   if (raw.includes('hahu')) {
     return {
       name: 'HaHuJobs',
       slug: 'hahujobs',
       color: '#4D9D8F',
+      logoShape: 'square',
       logoUrl: '/hahujob.jpeg',
       // Very thin subtle tint with #4D9D8F
       cardClasses: 'bg-[#4D9D8F]/[0.04] hover:bg-[#4D9D8F]/[0.08] border-[#4D9D8F]/25 hover:border-[#4D9D8F]/60',
@@ -128,21 +131,22 @@ export function getSourceTheme(source) {
     };
   }
 
-  // 4. Ethiojobs: #62BC8B
+  // 4. Ethiojobs: #62BC8B (Rectangular wordmark logo)
   if (raw.includes('ethiojob')) {
     return {
       name: 'Ethiojobs',
       slug: 'ethiojobs',
       color: '#62BC8B',
-      logoUrl: '/Ethiojobs.webp',
+      logoShape: 'rectangle',
+      logoUrl: '/ethiojobs-rect.webp',
       // Very thin subtle tint with #62BC8B
       cardClasses: 'bg-[#62BC8B]/[0.04] hover:bg-[#62BC8B]/[0.08] border-[#62BC8B]/25 hover:border-[#62BC8B]/60',
       badgeClasses: 'bg-white text-[#256B47] border-[#62BC8B]/40 shadow-2xs',
       bottomLogo: (
         <img
-          src="/ethiojobs-icon.webp"
+          src="/ethiojobs-rect.webp"
           alt="Ethiojobs"
-          className="w-full h-full object-contain rounded-sm"
+          className="h-full w-auto max-w-[64px] object-contain"
           loading="lazy"
         />
       ),
@@ -163,6 +167,7 @@ export function getSourceTheme(source) {
       name: 'GeezJobs',
       slug: 'geezjobs',
       color: '#2563EB',
+      logoShape: 'square',
       logoUrl: null,
       cardClasses: 'bg-[#2563EB]/[0.03] hover:bg-[#2563EB]/[0.06] border-indigo-100/90 hover:border-[#2563EB]/50',
       badgeClasses: 'bg-white text-[#2563EB] border-indigo-200/80 shadow-2xs',
@@ -382,7 +387,11 @@ export function JobCard({
           )}
           {sourceConfig?.bottomLogo && (
             <div
-              className="w-7 h-7 rounded-lg bg-white border border-black/10 shadow-2xs p-1 flex items-center justify-center shrink-0 group-hover:scale-110 transition-transform"
+              className={`h-7 rounded-lg bg-white border border-black/10 shadow-2xs flex items-center justify-center shrink-0 group-hover:scale-105 transition-transform ${
+                sourceConfig.logoShape === 'rectangle'
+                  ? 'w-auto max-w-[96px] px-2 py-0.5'
+                  : 'w-7 p-1'
+              }`}
               title={`Sourced from ${sourceConfig.name}`}
             >
               {sourceConfig.bottomLogo}
