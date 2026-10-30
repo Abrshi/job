@@ -1,9 +1,18 @@
+import net from 'node:net';
+import dns from 'node:dns';
 import { PrismaClient } from '@prisma/client';
 import { PrismaMariaDb } from '@prisma/adapter-mariadb';
 import { PrismaPg } from '@prisma/adapter-pg';
 import { Pool } from 'pg';
 import { env, getDatabaseProvider } from '../config/env';
 import { logger } from './logger';
+
+// Ensure IPv4 resolution takes priority to avoid ENETUNREACH timeouts on networks without global IPv6 routing
+try {
+  dns.setDefaultResultOrder('ipv4first');
+} catch {
+  // Ignore in environments where setDefaultResultOrder is not supported
+}
 
 const globalForPrisma = globalThis as unknown as {
   prisma: PrismaClient | undefined;
@@ -25,6 +34,17 @@ const createPrismaClient = (): PrismaClient => {
       max: 10,
       idleTimeoutMillis: 30000,
       connectionTimeoutMillis: 15000,
+      stream: () => {
+        const socket = new net.Socket();
+        const origConnect = socket.connect.bind(socket);
+        socket.connect = function (...args: any[]) {
+          if (typeof args[0] === 'object') {
+            return origConnect({ ...args[0], family: 4, autoSelectFamily: false }, args[1]);
+          }
+          return origConnect({ port: args[0], host: args[1], family: 4, autoSelectFamily: false }, args[2]);
+        };
+        return socket;
+      },
     });
 
     pool.on('error', (err) => {
