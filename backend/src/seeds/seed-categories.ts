@@ -88,6 +88,16 @@ export const INITIAL_CATEGORIES = [
     description: 'Hotel management, culinary arts, food and beverage, tour guiding, and event hosting',
   },
   {
+    name: 'Media',
+    slug: 'media',
+    description: 'Journalism, broadcasting, publishing, mass communication, and audio-visual production',
+  },
+  {
+    name: 'Design & Creative',
+    slug: 'design-creative',
+    description: 'UI/UX design, graphic arts, visual design, fashion design, and multimedia illustration',
+  },
+  {
     name: 'Media, Design & Creative',
     slug: 'media-design-creative',
     description: 'UI/UX design, graphic arts, video editing, photography, and creative multimedia',

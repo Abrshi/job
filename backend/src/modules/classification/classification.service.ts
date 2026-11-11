@@ -23,10 +23,18 @@ export class ClassificationService {
         job.normalizedDescription || job.originalDescription
       );
 
-      // Resolve category by slug
-      const category = await prisma.jobCategory.findUnique({
+      // Resolve category by slug, with fallback for legacy merged slugs if needed
+      let category = await prisma.jobCategory.findUnique({
         where: { slug: output.categorySlug },
       });
+
+      if (!category) {
+        if (output.categorySlug === 'design-creative' || output.categorySlug === 'media') {
+          category = await prisma.jobCategory.findUnique({
+            where: { slug: 'media-design-creative' },
+          });
+        }
+      }
 
       const { reviewStatus, jobStatus } = evaluateClassificationStatus(output.confidence);
 
@@ -93,10 +101,16 @@ export class ClassificationService {
     let succeeded = 0;
     let failed = 0;
 
-    for (const job of pendingJobs) {
+    for (let i = 0; i < pendingJobs.length; i++) {
+      const job = pendingJobs[i];
       const ok = await this.classifyJobById(job.id);
       if (ok) succeeded++;
       else failed++;
+
+      // Inter-request pacing: small pause to stay comfortably below Google's 15 requests/minute free-tier limit
+      if (i < pendingJobs.length - 1) {
+        await new Promise((resolve) => setTimeout(resolve, 1500));
+      }
     }
 
     return {

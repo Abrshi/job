@@ -5,7 +5,7 @@
   "main": "index.js",
   "scripts": {
     "dev": "npm run db:sync && tsx watch src/server.ts",
-    "build": "npm run db:sync && tsc",
+    "build": "npm run prisma:generate && tsc",
     "start": "node dist/server.js",
     "typecheck": "tsc --noEmit",
     "db:sync": "tsx scripts/sync-database-schema.ts",
@@ -15,6 +15,10 @@
     "prisma:studio": "tsx scripts/sync-database-schema.ts && prisma studio",
     "seed": "tsx src/seeds/index.ts",
     "sync:hahujobs": "tsx scripts/sync-hahujobs.ts",
+    "sync:ethiojobs": "tsx scripts/sync-ethiojobs.ts",
+    "sync:geezjobs": "tsx scripts/sync-geezjobs.ts",
+    "reclassify": "tsx scripts/reclassify-jobs.ts",
+    "telegram:backfill": "tsx scripts/telegram-backfill.ts",
     "test": "NODE_ENV=test tsx --test \"tests/**/*.test.ts\""
   },
   "keywords": [],

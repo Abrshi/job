@@ -36,6 +36,50 @@ describe('Job Search and Filtering API Exports', () => {
     assert.strictEqual(query.get('sortBy'), 'publishedAt');
   });
 
+  it('constructs query params with ethiojobs as source', () => {
+    const params = {
+      source: 'ethiojobs',
+      category: 'agriculture-environment',
+      status: 'ACTIVE',
+      workArrangement: 'HYBRID',
+      experienceLevel: 'MID',
+    };
+
+    const query = new URLSearchParams();
+    Object.entries(params).forEach(([key, value]) => {
+      if (value !== undefined && value !== null && value !== '') {
+        query.set(key, String(value));
+      }
+    });
+
+    assert.strictEqual(query.get('source'), 'ethiojobs');
+    assert.strictEqual(query.get('category'), 'agriculture-environment');
+    assert.strictEqual(query.get('workArrangement'), 'HYBRID');
+    assert.strictEqual(query.get('experienceLevel'), 'MID');
+  });
+
+  it('constructs query params with geezjobs as source', () => {
+    const params = {
+      source: 'geezjobs',
+      category: 'logistics-supply-chain',
+      status: 'ACTIVE',
+      workArrangement: 'ON_SITE',
+      experienceLevel: 'MID',
+    };
+
+    const query = new URLSearchParams();
+    Object.entries(params).forEach(([key, value]) => {
+      if (value !== undefined && value !== null && value !== '') {
+        query.set(key, String(value));
+      }
+    });
+
+    assert.strictEqual(query.get('source'), 'geezjobs');
+    assert.strictEqual(query.get('category'), 'logistics-supply-chain');
+    assert.strictEqual(query.get('workArrangement'), 'ON_SITE');
+    assert.strictEqual(query.get('experienceLevel'), 'MID');
+  });
+
   it('handles empty filters without adding blank parameters to query', () => {
     const params = {
       source: '',

@@ -1,0 +1,52 @@
+@import "tailwindcss";
+
+@theme {
+  --color-stormy-dark: #1E293B;
+  --color-stormy-darkHover: #0F172A;
+  --color-stormy-slate: #64748B;
+  --color-stormy-sky: #38BDF8;
+  --color-stormy-skyHover: #0284C7;
+  --color-stormy-mist: #BAE6FD;
+  --color-stormy-canvas: #090D16;
+  --color-stormy-card: #0F172A;
+  --color-stormy-border: #1E293B;
+  --color-stormy-main: #F8FAFC;
+  --color-stormy-muted: #94A3B8;
+
+  --color-feedback-success-bg: #064E3B;
+  --color-feedback-success-border: #059669;
+  --color-feedback-success: #34D399;
+  --color-feedback-success-text: #ECFDF5;
+
+  --color-feedback-warning-bg: #78350F;
+  --color-feedback-warning-border: #D97706;
+  --color-feedback-warning: #FBBF24;
+  --color-feedback-warning-text: #FEF3C7;
+
+  --color-feedback-danger-bg: #7F1D1D;
+  --color-feedback-danger-border: #DC2626;
+  --color-feedback-danger: #F87171;
+  --color-feedback-danger-text: #FEF2F2;
+
+  --color-feedback-info-bg: #0C4A6E;
+  --color-feedback-info-border: #0284C7;
+  --color-feedback-info: #38BDF8;
+  --color-feedback-info-text: #F0F9FF;
+
+  --shadow-subtle: 0 1px 3px 0 rgba(0, 0, 0, 0.3);
+  --shadow-card: 0 4px 6px -1px rgba(0, 0, 0, 0.4);
+  --shadow-elevated: 0 10px 15px -3px rgba(0, 0, 0, 0.5);
+}
+
+:root {
+  --background: #090D16;
+  --foreground: #F8FAFC;
+}
+
+body {
+  background: var(--background);
+  color: var(--foreground);
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  min-height: 100vh;
+}
+

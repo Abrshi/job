@@ -8,7 +8,7 @@ import { Button } from '@/components/ui/button';
 import { Alert } from '@/components/ui/alert';
 import { fetchJobById, saveJob, unsaveJob, applyJob, createApplication } from '@/lib/jobs-api';
 import { useAuth } from '@/hooks/use-auth';
-import { formatSalary, formatRelativeTime } from '@/components/job-card';
+import { formatSalary, formatRelativeTime, getSourceTheme } from '@/components/job-card';
 import { StatusBadge } from '@/components/applications/status-badge';
 import { DocumentGenerationModal } from '@/components/documents/document-generation-modal';
 
@@ -165,6 +165,7 @@ function JobDetailsContent() {
 
   const locationDisplay = [job.city, job.country].filter(Boolean).join(', ') || 'Location Unspecified';
   const publishedDateFormatted = formatRelativeTime(job.publishedAt || job.firstSeenAt);
+  const sourceConfig = getSourceTheme(job.source || job.sourceSlug);
   const closingDateFormatted = job.closingDate
     ? new Date(job.closingDate).toLocaleDateString('en-US', {
         month: 'short',
@@ -179,13 +180,17 @@ function JobDetailsContent() {
 
       <main className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-8 w-full flex-1">
         {/* Navigation Breadcrumb */}
-        <div className="mb-6 flex items-center justify-between text-xs text-stormy-muted">
+        <div className="mb-6 flex items-center justify-between text-xs text-stormy-muted flex-wrap gap-2">
           <Link href="/jobs" className="hover:text-stormy-dark flex items-center gap-1 font-semibold">
             &larr; Back to job search
           </Link>
-          {job.source?.name && (
-            <span>
-              Collected from <strong className="text-stormy-dark">{job.source.name}</strong>
+          {sourceConfig && (
+            <span className="inline-flex items-center gap-1.5">
+              <span>Collected from</span>
+              <span className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded-md text-[11px] font-semibold border ${sourceConfig.badgeClasses}`}>
+                {sourceConfig.icon}
+                <span>{sourceConfig.name}</span>
+              </span>
             </span>
           )}
         </div>
@@ -209,7 +214,11 @@ function JobDetailsContent() {
           {/* Main Description Column */}
           <div className="lg:col-span-8 space-y-6">
             {/* Header Box */}
-            <div className="bg-white border border-stormy-border rounded-2xl p-6 sm:p-8 shadow-card space-y-4">
+            <div
+              className={`rounded-2xl p-6 sm:p-8 shadow-card space-y-4 border transition-all duration-200 ${
+                sourceConfig?.cardClasses || 'bg-white border-stormy-border'
+              }`}
+            >
               <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-4">
                 <div>
                   <h1 className="text-xl sm:text-2xl font-extrabold text-stormy-main tracking-tight leading-snug">
@@ -468,9 +477,11 @@ function JobDetailsContent() {
                       href={job.originalUrl}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="text-stormy-sky hover:underline break-all inline-flex items-center gap-1 mt-0.5"
+                      className="text-stormy-sky hover:underline break-all inline-flex items-center gap-1.5 mt-1 font-medium"
                     >
-                      View on {job.source?.name || 'original platform'} &rarr;
+                      {sourceConfig?.icon}
+                      <span>View on {sourceConfig?.name || job.source?.name || 'original platform'}</span>
+                      <span>&rarr;</span>
                     </a>
                   </div>
                 )}

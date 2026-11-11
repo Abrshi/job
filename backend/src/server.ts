@@ -8,15 +8,27 @@ const server = app.listen(env.PORT, () => {
   logger.info(`Server running in ${env.NODE_ENV} mode on port ${env.PORT}`);
   logger.info(`Health check available at http://localhost:${env.PORT}/api/v1/health`);
 
-  // Start background job source scheduler
-  sourceScheduler.start();
+  // Warm up database connection in background
+  prisma.$queryRaw`SELECT 1`.catch((err) => {
+    logger.warn(`Initial database connection warmup notice: ${(err as Error).message || err}`);
+  });
+
+  // Start background job source scheduler only if enabled for this instance
+  if (env.ENABLE_SCHEDULER) {
+    logger.info('Background job source scheduler is enabled on this instance.');
+    sourceScheduler.start();
+  } else {
+    logger.info('Background job source scheduler is disabled on this instance (handled by admin backend).');
+  }
 });
 
 const handleShutdown = async (signal: string) => {
   logger.info(`Received ${signal}. Starting graceful shutdown...`);
 
-  // Stop dynamic scheduler timer
-  sourceScheduler.stop();
+  // Stop dynamic scheduler timer if running
+  if (sourceScheduler.isRunning) {
+    sourceScheduler.stop();
+  }
 
   server.close(async () => {
     logger.info('HTTP server closed.');

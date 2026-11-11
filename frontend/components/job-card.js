@@ -2,6 +2,7 @@
 
 import React from 'react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 
 export function formatSalary(min, max, currency = 'ETB', period) {
   if (!min && !max) return null;
@@ -34,12 +35,186 @@ export function formatRelativeTime(dateString) {
   return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
 }
 
+/**
+ * Returns brand metadata, clean logo icon, and subtle background tint classes for job sources
+ */
+export function getSourceTheme(source) {
+  const raw = (typeof source === 'string' ? source : (source?.slug || source?.name || '')).toLowerCase();
+
+  // 1. LinkedIn: #4D9D8F
+  if (raw.includes('linkedin')) {
+    return {
+      name: 'LinkedIn',
+      slug: 'linkedin',
+      color: '#4D9D8F',
+      logoShape: 'square',
+      logoUrl: '/linkedin.png',
+      // Very thin subtle tint with #4D9D8F
+      cardClasses: 'bg-[#4D9D8F]/[0.04] hover:bg-[#4D9D8F]/[0.08] border-[#4D9D8F]/25 hover:border-[#4D9D8F]/60',
+      badgeClasses: 'bg-white text-[#215E55] border-[#4D9D8F]/40 shadow-2xs',
+      bottomLogo: (
+        <img
+          src="/linkedin.png"
+          alt="LinkedIn"
+          className="w-full h-full object-contain rounded-sm"
+          loading="lazy"
+        />
+      ),
+      icon: (
+        <img
+          src="/linkedin.png"
+          alt="LinkedIn"
+          className="w-3.5 h-3.5 object-contain rounded-xs shrink-0"
+          loading="lazy"
+        />
+      ),
+    };
+  }
+
+  // 2. Afriwork: #E74B60 (Long horizontal rectangle logo)
+  if (raw.includes('afriwork')) {
+    return {
+      name: 'Afriwork',
+      slug: 'afriwork',
+      color: '#E74B60',
+      logoShape: 'rectangle',
+      logoUrl: '/afriwork-rect.png',
+      // Very thin subtle tint with #E74B60
+      cardClasses: 'bg-[#E74B60]/[0.04] hover:bg-[#E74B60]/[0.08] border-[#E74B60]/25 hover:border-[#E74B60]/60',
+      badgeClasses: 'bg-white text-[#AD1F35] border-[#E74B60]/40 shadow-2xs',
+      bottomLogo: (
+        <img
+          src="/afriwork-rect.png"
+          alt="Afriwork"
+          className="h-full w-auto max-w-[84px] object-contain"
+          loading="lazy"
+        />
+      ),
+      icon: (
+        <img
+          src="/afriwork-icon.png"
+          alt="Afriwork"
+          className="w-3.5 h-3.5 object-contain rounded-xs shrink-0"
+          loading="lazy"
+        />
+      ),
+    };
+  }
+
+  // 3. HaHuJobs: #4D9D8F (Square logo)
+  if (raw.includes('hahu')) {
+    return {
+      name: 'HaHuJobs',
+      slug: 'hahujobs',
+      color: '#4D9D8F',
+      logoShape: 'square',
+      logoUrl: '/hahujob.jpeg',
+      // Very thin subtle tint with #4D9D8F
+      cardClasses: 'bg-[#4D9D8F]/[0.04] hover:bg-[#4D9D8F]/[0.08] border-[#4D9D8F]/25 hover:border-[#4D9D8F]/60',
+      badgeClasses: 'bg-white text-[#215E55] border-[#4D9D8F]/40 shadow-2xs',
+      bottomLogo: (
+        <img
+          src="/hahujob.jpeg"
+          alt="HaHuJobs"
+          className="w-full h-full object-contain rounded-sm"
+          loading="lazy"
+        />
+      ),
+      icon: (
+        <img
+          src="/hahujob.jpeg"
+          alt="HaHuJobs"
+          className="w-3.5 h-3.5 object-contain rounded-xs shrink-0"
+          loading="lazy"
+        />
+      ),
+    };
+  }
+
+  // 4. Ethiojobs: #62BC8B (Rectangular wordmark logo)
+  if (raw.includes('ethiojob')) {
+    return {
+      name: 'Ethiojobs',
+      slug: 'ethiojobs',
+      color: '#62BC8B',
+      logoShape: 'rectangle',
+      logoUrl: '/ethiojobs-rect.webp',
+      // Very thin subtle tint with #62BC8B
+      cardClasses: 'bg-[#62BC8B]/[0.04] hover:bg-[#62BC8B]/[0.08] border-[#62BC8B]/25 hover:border-[#62BC8B]/60',
+      badgeClasses: 'bg-white text-[#256B47] border-[#62BC8B]/40 shadow-2xs',
+      bottomLogo: (
+        <img
+          src="/ethiojobs-rect.webp"
+          alt="Ethiojobs"
+          className="h-full w-auto max-w-[64px] object-contain"
+          loading="lazy"
+        />
+      ),
+      icon: (
+        <img
+          src="/ethiojobs-icon.webp"
+          alt="Ethiojobs"
+          className="w-3.5 h-3.5 object-contain rounded-xs shrink-0"
+          loading="lazy"
+        />
+      ),
+    };
+  }
+
+  // 5. GeezJobs
+  if (raw.includes('geez')) {
+    return {
+      name: 'GeezJobs',
+      slug: 'geezjobs',
+      color: '#2563EB',
+      logoShape: 'square',
+      logoUrl: null,
+      cardClasses: 'bg-[#2563EB]/[0.03] hover:bg-[#2563EB]/[0.06] border-indigo-100/90 hover:border-[#2563EB]/50',
+      badgeClasses: 'bg-white text-[#2563EB] border-indigo-200/80 shadow-2xs',
+      bottomLogo: (
+        <svg className="w-full h-full" viewBox="0 0 24 24" fill="none">
+          <rect width="24" height="24" rx="5" fill="#2563EB" />
+          <path d="M12 5L15 12H9L12 5ZM12 19L9 12H15L12 19Z" fill="white" />
+        </svg>
+      ),
+      icon: (
+        <svg className="w-3.5 h-3.5 shrink-0" viewBox="0 0 24 24" fill="none">
+          <rect width="24" height="24" rx="5" fill="#2563EB" />
+          <path d="M12 5L15 12H9L12 5ZM12 19L9 12H15L12 19Z" fill="white" />
+        </svg>
+      ),
+    };
+  }
+
+  if (!raw) return null;
+
+  return {
+    name: source?.name || source || 'Platform',
+    slug: source?.slug || 'direct',
+    color: '#64748B',
+    cardClasses: 'bg-white hover:bg-slate-50/50 border-stormy-border hover:border-stormy-sky',
+    badgeClasses: 'bg-slate-100 text-stormy-muted border-slate-200',
+    bottomLogo: (
+      <svg className="w-4 h-4 text-slate-500" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
+      </svg>
+    ),
+    icon: (
+      <svg className="w-3.5 h-3.5 shrink-0 text-slate-500" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
+      </svg>
+    ),
+  };
+}
+
 export function JobCard({
   job,
   onToggleSave,
   isSavePending = false,
   showRemoveButton = false,
 }) {
+  const router = useRouter();
+
   const salaryDisplay = formatSalary(
     job.salaryMin,
     job.salaryMax,
@@ -49,6 +224,7 @@ export function JobCard({
 
   const formattedDate = formatRelativeTime(job.publishedAt || job.firstSeenAt);
   const locationDisplay = [job.city, job.country].filter(Boolean).join(', ') || 'Location Unspecified';
+  const sourceConfig = getSourceTheme(job.source || job.sourceSlug);
 
   const arrangementLabels = {
     REMOTE: { label: 'Remote', bg: 'bg-emerald-50 text-emerald-700 border-emerald-200' },
@@ -76,14 +252,30 @@ export function JobCard({
   };
 
   return (
-    <div className="group relative bg-white border border-stormy-border rounded-xl p-5 hover:border-stormy-sky hover:shadow-card transition-all duration-200 flex flex-col justify-between">
+    <div
+      onClick={() => router.push(`/jobs/${job.id}`)}
+      className={`group relative rounded-xl p-5 border transition-all duration-200 flex flex-col justify-between shadow-2xs hover:shadow-card cursor-pointer select-none ${
+        sourceConfig?.cardClasses || 'bg-white border-stormy-border hover:border-stormy-sky hover:bg-slate-50/50'
+      }`}
+    >
+      {/* Stretched Link for keyboard accessibility and middle/command click */}
+      <Link
+        href={`/jobs/${job.id}`}
+        className="absolute inset-0 z-0 rounded-xl"
+        aria-label={`View details for ${job.title}`}
+        tabIndex={-1}
+      />
+
       <div>
-        {/* Top bar: Source + Date + Save control */}
+        {/* Top bar: Source Name (without logo) + Category + Date + Save control */}
         <div className="flex items-center justify-between gap-2 mb-3">
           <div className="flex items-center gap-2 flex-wrap">
-            {job.source?.name && (
-              <span className="inline-flex items-center px-2 py-0.5 rounded text-[11px] font-semibold bg-slate-100 text-stormy-muted border border-slate-200">
-                {job.source.name}
+            {sourceConfig && (
+              <span
+                className={`inline-flex items-center px-2 py-0.5 rounded-md text-[11px] font-semibold border ${sourceConfig.badgeClasses}`}
+                title={`Job vacancy sourced from ${sourceConfig.name}`}
+              >
+                {sourceConfig.name}
               </span>
             )}
             {job.category?.name && (
@@ -108,7 +300,7 @@ export function JobCard({
                 onToggleSave(job);
               }}
               disabled={isSavePending}
-              className={`p-2 rounded-lg transition-colors cursor-pointer ${
+              className={`relative z-10 p-2 rounded-lg transition-colors cursor-pointer ${
                 job.isSaved
                   ? 'text-stormy-sky bg-stormy-mist/30 hover:bg-stormy-mist/50'
                   : 'text-stormy-muted hover:text-stormy-dark hover:bg-stormy-canvas'
@@ -134,17 +326,17 @@ export function JobCard({
         </div>
 
         {/* Title and Company */}
-        <Link href={`/jobs/${job.id}`} className="block focus:outline-none">
+        <div className="block">
           <h3 className="text-base sm:text-lg font-bold text-stormy-main group-hover:text-stormy-slate transition-colors line-clamp-2">
             {job.title}
           </h3>
           <p className="text-sm font-medium text-stormy-muted mt-1 line-clamp-1">
             {job.companyName || 'Confidential Employer'}
           </p>
-        </Link>
+        </div>
 
         {/* Badges strip: Arrangement, Type, Exp, Location */}
-        <div className="flex flex-wrap items-center gap-1.5 mt-3">
+        <div className="flex flex-wrap items-center gap-1.5 mt-3 pointer-events-none">
           <span
             className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold border ${arrangement.bg}`}
           >
@@ -173,8 +365,8 @@ export function JobCard({
         </div>
       </div>
 
-      {/* Footer: Salary + Details Link */}
-      <div className="mt-4 pt-3 border-t border-stormy-border/70 flex items-center justify-between text-xs">
+      {/* Footer: Salary on left + Source Logo on bottom right (Details button removed) */}
+      <div className="mt-4 pt-3 border-t border-stormy-border/70 flex items-center justify-between text-xs pointer-events-none">
         <div>
           {salaryDisplay ? (
             <span className="font-bold text-stormy-dark">
@@ -193,12 +385,18 @@ export function JobCard({
               Quick Apply
             </span>
           )}
-          <Link
-            href={`/jobs/${job.id}`}
-            className="text-xs font-semibold text-stormy-sky hover:text-stormy-skyHover transition-colors flex items-center gap-1 group-hover:translate-x-0.5 duration-150"
-          >
-            Details &rarr;
-          </Link>
+          {sourceConfig?.bottomLogo && (
+            <div
+              className={`h-7 rounded-lg bg-white border border-black/10 shadow-2xs flex items-center justify-center shrink-0 group-hover:scale-105 transition-transform ${
+                sourceConfig.logoShape === 'rectangle'
+                  ? 'w-auto max-w-[96px] px-2 py-0.5'
+                  : 'w-7 p-1'
+              }`}
+              title={`Sourced from ${sourceConfig.name}`}
+            >
+              {sourceConfig.bottomLogo}
+            </div>
+          )}
         </div>
       </div>
     </div>

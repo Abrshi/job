@@ -31,7 +31,7 @@ export default function SavedJobsPage() {
     setIsLoading(true);
     setError(null);
     try {
-      const data = await fetchSavedJobs(pageNum, 12);
+      const data = await fetchSavedJobs(pageNum, 36);
       setSavedJobs(data.jobs || []);
       setTotal(data.total || 0);
       setPage(data.page || 1);

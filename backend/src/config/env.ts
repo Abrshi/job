@@ -52,6 +52,11 @@ const rawEmailUser = sanitizeEnvString(process.env.EMAIL_USER);
 const rawGoogleAppPassword = sanitizeEnvString(process.env.GOOGLE_APP_PASSWORD);
 const rawSmsDeviceToken = sanitizeEnvString(process.env.SMS_DEVICE_TOKEN);
 const rawSmsApiUrl = sanitizeEnvString(process.env.SMS_API_URL);
+const rawTelegramBotToken = sanitizeEnvString(process.env.TELEGRAM_BOT_TOKEN);
+const rawTelegramChannelId = sanitizeEnvString(process.env.TELEGRAM_CHANNEL_ID) || '@etjobcollector';
+const rawExchangeRatesJson = sanitizeEnvString(process.env.EXCHANGE_RATES_JSON);
+const rawTelegramAutoPostStartDate = sanitizeEnvString(process.env.TELEGRAM_AUTO_POST_START_DATE);
+const rawTelegramInternalApiSecret = sanitizeEnvString(process.env.TELEGRAM_INTERNAL_API_SECRET);
 
 const envSchema = z.object({
   NODE_ENV: z.enum(['development', 'test', 'production']).default('development'),
@@ -59,6 +64,7 @@ const envSchema = z.object({
   DATABASE_URL: z.string().min(1, 'DATABASE_URL is required'),
   DB_PROVIDER: z.enum(['mysql', 'mariadb', 'postgres', 'postgresql']).optional(),
   FRONTEND_ORIGIN: z.string().default('http://localhost:3000'),
+  ADMIN_FRONTEND_ORIGIN: z.string().default('http://localhost:3001'),
   ACCESS_TOKEN_SECRET: z.string().min(16, 'ACCESS_TOKEN_SECRET must be at least 16 characters'),
   REFRESH_TOKEN_SECRET: z.string().min(16, 'REFRESH_TOKEN_SECRET must be at least 16 characters'),
   ACCESS_TOKEN_EXPIRES_IN: z.string().default('15m'),
@@ -80,6 +86,16 @@ const envSchema = z.object({
   GOOGLE_APP_PASSWORD: z.string().optional(),
   SMS_DEVICE_TOKEN: z.string().optional(),
   SMS_API_URL: z.string().default('https://sms-connect.vercel.app'),
+  TELEGRAM_BOT_TOKEN: z.string().optional(),
+  TELEGRAM_CHANNEL_ID: z.string().default('@etjobcollector'),
+  EXCHANGE_RATES_JSON: z.string().optional(),
+  TELEGRAM_MIN_SALARY_ETB: z.coerce.number().default(20000),
+  TELEGRAM_AUTO_POST_START_DATE: z.string().optional(),
+  TELEGRAM_INTERNAL_API_SECRET: z.string().default('development_telegram_worker_internal_secret_key_12345'),
+  ENABLE_SCHEDULER: z
+    .enum(['true', 'false'])
+    .default('false')
+    .transform((val) => val === 'true'),
 });
 
 export type Env = z.infer<typeof envSchema>;
@@ -101,6 +117,11 @@ const parseEnv = (): Env => {
     GOOGLE_APP_PASSWORD: rawGoogleAppPassword,
     SMS_DEVICE_TOKEN: rawSmsDeviceToken,
     SMS_API_URL: rawSmsApiUrl || 'https://sms-connect.vercel.app',
+    TELEGRAM_BOT_TOKEN: rawTelegramBotToken,
+    TELEGRAM_CHANNEL_ID: rawTelegramChannelId,
+    EXCHANGE_RATES_JSON: rawExchangeRatesJson,
+    TELEGRAM_AUTO_POST_START_DATE: rawTelegramAutoPostStartDate,
+    TELEGRAM_INTERNAL_API_SECRET: rawTelegramInternalApiSecret || 'development_telegram_worker_internal_secret_key_12345',
   };
 
   const result = envSchema.safeParse(mergedEnv);

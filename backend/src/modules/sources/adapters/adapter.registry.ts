@@ -1,6 +1,9 @@
 import { SourceAdapter } from './source-adapter.interface';
 import { afriworkAdapter } from './afriwork.adapter';
 import { hahuJobsAdapter } from './hahujobs.adapter';
+import { ethioJobsAdapter } from './ethiojobs.adapter';
+import { geezJobsAdapter } from './geezjobs.adapter';
+import { linkedInSourceAdapter } from './linkedin.source-adapter';
 import { AppError } from '../../../middleware/error-handler';
 
 export class AdapterRegistry {
@@ -9,6 +12,9 @@ export class AdapterRegistry {
   constructor() {
     this.register(afriworkAdapter);
     this.register(hahuJobsAdapter);
+    this.register(ethioJobsAdapter);
+    this.register(geezJobsAdapter);
+    this.register(linkedInSourceAdapter);
   }
 
   register(adapter: SourceAdapter): void {
