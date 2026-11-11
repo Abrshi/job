@@ -1,0 +1,30 @@
+{
+  "name": "telegram-worker",
+  "version": "1.0.0",
+  "description": "Independent Telegram Ingestion Server for Job Platform",
+  "main": "src/index.js",
+  "type": "module",
+  "scripts": {
+    "start": "node src/index.js",
+    "dev": "node --watch src/index.js",
+    "session": "node generate-session.js",
+    "test": "node --test tests/**/*.test.js"
+  },
+  "keywords": [
+    "telegram",
+    "gramjs",
+    "job-worker",
+    "ingestion"
+  ],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "axios": "^1.7.9",
+    "better-sqlite3": "^11.8.1",
+    "dotenv": "^16.6.1",
+    "express": "^4.21.2",
+    "input": "^1.0.1",
+    "nodemon": "^3.1.14",
+    "telegram": "^2.26.22"
+  }
+}

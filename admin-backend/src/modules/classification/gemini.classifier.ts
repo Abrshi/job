@@ -18,8 +18,8 @@ export const DEFAULT_MODEL_IDENTIFIER = env.GEMINI_MODEL || 'gemini-2.0-flash-li
 export const FREE_GEMINI_MODELS = [
   env.GEMINI_MODEL || 'gemini-2.0-flash-lite',
   'gemini-2.0-flash',
-  'gemini-1.5-flash-8b',
-  'gemini-1.5-flash',
+  'gemini-2.0-flash-8b',
+  'gemini-2.0-flash',
 ];
 
 const CATEGORY_LIST_FOR_PROMPT = INITIAL_CATEGORIES.map(

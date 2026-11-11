@@ -299,6 +299,7 @@ model Job {
   notifications            JobNotification[]
   generatedDocuments       GeneratedDocument[]
   telegramPost             TelegramPost?
+  telegramMessages         TelegramMessage[]
 
   @@unique([sourceId, fingerprint])
   @@index([sourceId])
@@ -1010,7 +1011,53 @@ model LinkedInCompany {
   @@map("linkedin_companies")
 }
 
+enum TelegramMessageStatus {
+  PENDING
+  PROCESSED
+  DUPLICATE
+  FAILED
+  IGNORED
+}
 
+model TelegramChannel {
+  id                  String            @id @default(uuid())
+  telegramChannelId   String            @unique @map("telegram_channel_id")
+  username            String?
+  title               String
+  isActive            Boolean           @default(true) @map("is_active")
+  isAuthorized        Boolean           @default(true) @map("is_authorized")
+  authorizationRecord String?           @db.Text @map("authorization_record")
+  lastMessageId       Int?              @map("last_message_id")
+  lastEventAt         DateTime?         @map("last_event_at")
+  createdAt           DateTime          @default(now()) @map("created_at")
+  updatedAt           DateTime          @updatedAt @map("updated_at")
+  messages            TelegramMessage[]
 
+  @@map("telegram_channels")
+}
 
+model TelegramMessage {
+  id                String                @id @default(uuid())
+  channelId         String                @map("channel_id")
+  channel           TelegramChannel       @relation(fields: [channelId], references: [id], onDelete: Cascade)
+  telegramMessageId Int                   @map("telegram_message_id")
+  originalText      String                @db.Text @map("original_text")
+  publishedAt       DateTime              @map("published_at")
+  detectedAt        DateTime              @default(now()) @map("detected_at")
+  sourceUrl         String?               @map("source_url")
+  mediaMetadata     Json?                 @map("media_metadata")
+  processingStatus  TelegramMessageStatus @default(PENDING) @map("processing_status")
+  jobId             String?               @map("job_id")
+  job               Job?                  @relation(fields: [jobId], references: [id], onDelete: SetNull)
+  errorMessage      String?               @db.Text @map("error_message")
+  rawPayload        Json?                 @map("raw_payload")
+  createdAt         DateTime              @default(now()) @map("created_at")
+  updatedAt         DateTime              @updatedAt @map("updated_at")
+
+  @@unique([channelId, telegramMessageId])
+  @@index([processingStatus])
+  @@index([publishedAt])
+  @@index([jobId])
+  @@map("telegram_messages")
+}
 

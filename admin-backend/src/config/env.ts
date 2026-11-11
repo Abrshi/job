@@ -56,6 +56,7 @@ const rawTelegramBotToken = sanitizeEnvString(process.env.TELEGRAM_BOT_TOKEN);
 const rawTelegramChannelId = sanitizeEnvString(process.env.TELEGRAM_CHANNEL_ID) || '@etjobcollector';
 const rawExchangeRatesJson = sanitizeEnvString(process.env.EXCHANGE_RATES_JSON);
 const rawTelegramAutoPostStartDate = sanitizeEnvString(process.env.TELEGRAM_AUTO_POST_START_DATE);
+const rawTelegramInternalApiSecret = sanitizeEnvString(process.env.TELEGRAM_INTERNAL_API_SECRET);
 
 const envSchema = z.object({
   NODE_ENV: z.enum(['development', 'test', 'production']).default('development'),
@@ -90,6 +91,8 @@ const envSchema = z.object({
   EXCHANGE_RATES_JSON: z.string().optional(),
   TELEGRAM_MIN_SALARY_ETB: z.coerce.number().default(20000),
   TELEGRAM_AUTO_POST_START_DATE: z.string().optional(),
+  TELEGRAM_INTERNAL_API_SECRET: z.string().default('development_telegram_worker_internal_secret_key_12345'),
+  TELEGRAM_WORKER_URL: z.string().default('http://localhost:5002'),
   ENABLE_SCHEDULER: z
     .enum(['true', 'false'])
     .default('false')
@@ -119,6 +122,8 @@ const parseEnv = (): Env => {
     TELEGRAM_CHANNEL_ID: rawTelegramChannelId,
     EXCHANGE_RATES_JSON: rawExchangeRatesJson,
     TELEGRAM_AUTO_POST_START_DATE: rawTelegramAutoPostStartDate,
+    TELEGRAM_INTERNAL_API_SECRET: rawTelegramInternalApiSecret || 'development_telegram_worker_internal_secret_key_12345',
+    TELEGRAM_WORKER_URL: sanitizeEnvString(process.env.TELEGRAM_WORKER_URL) || 'http://localhost:5002',
   };
 
   const result = envSchema.safeParse(mergedEnv);

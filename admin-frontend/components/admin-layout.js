@@ -16,6 +16,7 @@ export function AdminLayout({ children }) {
     { label: 'Job Management', href: '/jobs' },
     { label: 'User Governance', href: '/users' },
     { label: 'Ingestion Sources', href: '/sources' },
+    { label: 'Telegram Ingestion', href: '/telegram' },
     { label: 'Discovery & Coverage', href: '/discovery' },
     { label: 'Classification Review', href: '/classifications' },
     { label: 'Site Settings', href: '/settings' },

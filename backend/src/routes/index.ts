@@ -6,6 +6,7 @@ import profileRoutes from '../modules/profile/profile.routes';
 import documentsRoutes from '../modules/documents/documents.routes';
 import aiDocumentsRoutes from '../modules/ai-documents/ai-documents.routes';
 import { savedSearchesRoutes, notificationsRoutes } from '../modules/alerts/alerts.routes';
+import internalTelegramRoutes from '../modules/telegram-ingestion/telegram-ingestion.routes';
 
 const router = Router();
 
@@ -25,5 +26,6 @@ router.use('/documents', documentsRoutes);
 router.use('/ai-documents', aiDocumentsRoutes);
 router.use('/saved-searches', savedSearchesRoutes);
 router.use('/notifications', notificationsRoutes);
+router.use('/internal/telegram', internalTelegramRoutes);
 
 export default router;

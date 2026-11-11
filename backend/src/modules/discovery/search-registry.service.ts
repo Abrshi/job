@@ -125,9 +125,9 @@ export class SearchRegistryService {
 
     if (options.search) {
       where.OR = [
-        { queryText: { contains: options.search, mode: 'insensitive' } },
-        { subcategory: { contains: options.search, mode: 'insensitive' } },
-        { targetLocation: { contains: options.search, mode: 'insensitive' } },
+        { queryText: { contains: options.search } },
+        { subcategory: { contains: options.search } },
+        { targetLocation: { contains: options.search } },
       ];
     }
 

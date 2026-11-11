@@ -45,9 +45,9 @@ export class LinkedInCompaniesService {
 
     if (options.search) {
       where.OR = [
-        { name: { contains: options.search, mode: 'insensitive' } },
-        { industry: { contains: options.search, mode: 'insensitive' } },
-        { location: { contains: options.search, mode: 'insensitive' } },
+        { name: { contains: options.search } },
+        { industry: { contains: options.search } },
+        { location: { contains: options.search } },
       ];
     }
 
